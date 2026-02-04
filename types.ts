@@ -1,8 +1,11 @@
-export type BlockType = 'hero' | 'feature' | 'content' | 'gallery' | 'contact' | 'footer' | 'html' | 'drive' | 'video' | 'image' | 'ticker' | 'orgChart' | 'stats' | 'time' | 'visitor' | 'speech' | 'calendar' | 'downloads' | 'faq' | 'cta' | 'countdown' | 'notice' | 'table' | 'staffGrid' | 'testimonial' | 'linkList' | 'news' | 'definition' | 'divider' | 'spacer';
+export type BlockType = 'hero' | 'feature' | 'content' | 'gallery' | 'contact' | 'footer' | 'html' | 'drive' | 'video' | 'image' | 'ticker' | 'orgChart' | 'stats' | 'time' | 'visitor' | 'speech' | 'calendar' | 'downloads' | 'faq' | 'cta' | 'countdown' | 'notice' | 'table' | 'staffGrid' | 'testimonial' | 'linkList' | 'news' | 'definition' | 'divider' | 'spacer' | 'title' | 'navbar' | 'history';
+
+export type BlockWidth = 'w-full' | 'w-3/4' | 'w-2/3' | 'w-1/2' | 'w-1/3' | 'w-1/4';
 
 export interface BaseBlock {
   id: string;
   type: BlockType;
+  width?: BlockWidth; // New: Allow resizing width
 }
 
 export interface HeroBlock extends BaseBlock {
@@ -15,6 +18,33 @@ export interface HeroBlock extends BaseBlock {
     buttonLink?: string;
     fontSize?: 'sm' | 'md' | 'lg' | 'xl';
     overlayOpacity?: number;
+    height?: number; // New: Allow adjusting height
+  };
+}
+
+export interface TitleBlock extends BaseBlock {
+  type: 'title';
+  data: {
+    text: string;
+    alignment: 'left' | 'center' | 'right';
+    fontSize: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+    color?: string;
+  };
+}
+
+export interface NavbarBlock extends BaseBlock {
+  type: 'navbar';
+  data: {
+    style: 'transparent' | 'light' | 'dark' | 'primary';
+    alignment: 'left' | 'center' | 'right';
+  };
+}
+
+export interface HistoryBlock extends BaseBlock {
+  type: 'history';
+  data: {
+    title: string;
+    body: string;
   };
 }
 
@@ -372,7 +402,10 @@ export type SectionBlock =
   | NewsBlock
   | DefinitionBlock
   | DividerBlock
-  | SpacerBlock;
+  | SpacerBlock
+  | TitleBlock
+  | NavbarBlock
+  | HistoryBlock;
 
 export interface Page {
   id: string;

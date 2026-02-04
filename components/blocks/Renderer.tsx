@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   SectionBlock, HeroBlock, FeatureBlock, ContentBlock, GalleryBlock, 
   ContactBlock, FooterBlock, HtmlBlock, DriveBlock, VideoBlock, ImageBlock,
   TickerBlock, OrgChartBlock, StatsBlock, TimeBlock, VisitorBlock, SpeechBlock,
   CalendarBlock, DownloadsBlock, FaqBlock, CtaBlock, CountdownBlock, NoticeBlock,
   TableBlock, StaffGridBlock, TestimonialBlock, LinkListBlock, NewsBlock, DefinitionBlock, 
-  DividerBlock, SpacerBlock, OrgMember
+  DividerBlock, SpacerBlock, TitleBlock, NavbarBlock, HistoryBlock, OrgMember, Page, FeatureItem, StatItem, FaqItem
 } from '../../types';
 import { getIconByName, Icons, iconList } from '../ui/Icons';
 import { v4 as uuidv4 } from 'uuid';
@@ -14,6 +14,10 @@ interface RendererProps {
   block: SectionBlock;
   isPreview: boolean;
   onUpdate: (id: string, data: any) => void;
+  // We need pages for the Navbar widget
+  allPages?: Page[];
+  onSwitchPage?: (id: string) => void;
+  activePageId?: string;
 }
 
 // Helper for Image Inputs
@@ -55,20 +59,134 @@ const getSizeClass = (size?: string, type: 'title' | 'body' = 'body') => {
   return map[size || 'md'][type];
 };
 
-// Helper for Date Formatting (d/m/yyyy)
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  const parts = dateStr.split('-');
-  if (parts.length !== 3) return dateStr;
-  const [y, m, d] = parts;
-  return `${parseInt(d)}/${parseInt(m)}/${y}`; 
-};
-
 // --- RENDERERS ---
 
-export const HeroRenderer: React.FC<{ block: HeroBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
+const NavItemWidget: React.FC<{ page: Page; activePageId?: string; onSwitchPage?: (id: string) => void }> = ({ page, activePageId, onSwitchPage }) => {
+  const hasChildren = page.subPages && page.subPages.length > 0;
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <div className="relative min-h-[500px] w-full flex flex-col items-center justify-center text-center text-white overflow-hidden group">
+    <div className="relative" ref={ref}>
+      <button 
+        onClick={() => {
+           if (hasChildren) setIsOpen(!isOpen);
+           else onSwitchPage?.(page.id);
+        }}
+        className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-1 transition-colors ${activePageId === page.id ? 'bg-primary text-white' : 'hover:bg-gray-100 text-gray-700'}`}
+      >
+        {page.name}
+        {hasChildren && <Icons.ChevronDown size={14} className={isOpen ? 'rotate-180' : ''} />}
+      </button>
+
+      {hasChildren && isOpen && (
+         <div className="absolute top-full left-0 mt-2 w-64 bg-white shadow-xl rounded-xl border border-gray-100 overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2">
+            {page.subPages?.map(sub => (
+              <button 
+                key={sub.id}
+                onClick={() => { onSwitchPage?.(sub.id); setIsOpen(false); }}
+                className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm font-medium border-b border-gray-50 last:border-0 flex items-center gap-2"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-primary/50"></div>
+                {sub.name}
+              </button>
+            ))}
+         </div>
+      )}
+    </div>
+  )
+}
+
+export const NavbarRenderer: React.FC<{ block: NavbarBlock } & RendererProps> = ({ block, isPreview, onUpdate, allPages, activePageId, onSwitchPage }) => {
+  const styles: any = {
+    transparent: 'bg-transparent',
+    light: 'bg-white shadow-sm border-b border-gray-100',
+    dark: 'bg-gray-900 text-white',
+    primary: 'bg-primary text-white'
+  };
+
+  return (
+    <div className={`w-full py-3 px-6 ${styles[block.data.style]} flex items-center relative group`}>
+       <div className={`flex-1 flex gap-2 flex-wrap ${block.data.alignment === 'center' ? 'justify-center' : block.data.alignment === 'right' ? 'justify-end' : 'justify-start'}`}>
+          {allPages?.map(page => (
+            <NavItemWidget key={page.id} page={page} activePageId={activePageId} onSwitchPage={onSwitchPage} />
+          ))}
+       </div>
+       
+       {!isPreview && (
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 bg-white p-1 rounded border shadow-sm z-10">
+             <select value={block.data.style} onChange={e => onUpdate(block.id, {...block.data, style: e.target.value})} className="text-xs border rounded text-black">
+               <option value="light">Putih</option>
+               <option value="transparent">Lutsinar</option>
+               <option value="dark">Gelap</option>
+               <option value="primary">Warna Tema</option>
+             </select>
+             <button onClick={() => onUpdate(block.id, {...block.data, alignment: 'left'})} className="p-1 hover:bg-gray-100 rounded text-black"><Icons.AlignLeft size={14}/></button>
+             <button onClick={() => onUpdate(block.id, {...block.data, alignment: 'center'})} className="p-1 hover:bg-gray-100 rounded text-black"><Icons.AlignCenter size={14}/></button>
+             <button onClick={() => onUpdate(block.id, {...block.data, alignment: 'right'})} className="p-1 hover:bg-gray-100 rounded text-black"><Icons.AlignRight size={14}/></button>
+          </div>
+       )}
+    </div>
+  )
+}
+
+export const TitleRenderer: React.FC<{ block: TitleBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
+  const sizeMap: any = {
+    'sm': 'text-xl',
+    'md': 'text-2xl',
+    'lg': 'text-3xl',
+    'xl': 'text-4xl',
+    '2xl': 'text-5xl'
+  };
+
+  return (
+    <div className="py-6 px-4 relative group">
+       {isPreview ? (
+         <h2 
+           className={`${sizeMap[block.data.fontSize]} font-bold text-${block.data.alignment} tracking-tight leading-tight`} 
+           style={{ color: block.data.color || 'inherit' }}
+         >
+           {block.data.text}
+         </h2>
+       ) : (
+         <input 
+           value={block.data.text} 
+           onChange={e => onUpdate(block.id, {...block.data, text: e.target.value})}
+           className={`w-full bg-transparent border-b border-dashed border-gray-300 outline-none ${sizeMap[block.data.fontSize]} font-bold text-${block.data.alignment}`}
+           style={{ color: block.data.color }}
+           placeholder="Masukkan Tajuk..."
+         />
+       )}
+       
+       {!isPreview && (
+          <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity bg-white border p-1 rounded flex gap-2 shadow-sm z-10">
+             <FontSizeControl value={block.data.fontSize === '2xl' ? 'xl' : block.data.fontSize} onChange={v => onUpdate(block.id, {...block.data, fontSize: v === 'xl' ? '2xl' : v})} />
+             <input type="color" value={block.data.color || '#000000'} onChange={e => onUpdate(block.id, {...block.data, color: e.target.value})} className="w-6 h-6 rounded cursor-pointer border-0" />
+             <button onClick={() => onUpdate(block.id, {...block.data, alignment: 'left'})} className="p-1 hover:bg-gray-100 rounded"><Icons.AlignLeft size={14}/></button>
+             <button onClick={() => onUpdate(block.id, {...block.data, alignment: 'center'})} className="p-1 hover:bg-gray-100 rounded"><Icons.AlignCenter size={14}/></button>
+             <button onClick={() => onUpdate(block.id, {...block.data, alignment: 'right'})} className="p-1 hover:bg-gray-100 rounded"><Icons.AlignRight size={14}/></button>
+          </div>
+       )}
+    </div>
+  )
+}
+
+export const HeroRenderer: React.FC<{ block: HeroBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
+  const height = block.data.height || 500;
+  
+  return (
+    <div 
+      className="relative w-full flex flex-col items-center justify-center text-center text-white overflow-hidden group transition-all duration-300"
+      style={{ minHeight: `${height}px` }}
+    >
       <div 
         className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
         style={{ backgroundImage: `url(${block.data.bgImage})` }}
@@ -80,8 +198,11 @@ export const HeroRenderer: React.FC<{ block: HeroBlock } & RendererProps> = ({ b
       
       {!isPreview && (
         <div className="absolute top-4 right-4 z-30 flex flex-col gap-2 items-end">
-           <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100 flex items-center gap-2">
-              <span className="text-[10px] font-bold text-gray-500 uppercase">Gelap/Cerah</span>
+           <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100 flex flex-col gap-2 w-48">
+              <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase">
+                 <span>Gelap Overlay</span>
+                 <span>{((block.data.overlayOpacity ?? 0.8) * 100).toFixed(0)}%</span>
+              </div>
               <input 
                 type="range" 
                 min="0" 
@@ -89,7 +210,21 @@ export const HeroRenderer: React.FC<{ block: HeroBlock } & RendererProps> = ({ b
                 step="0.1" 
                 value={block.data.overlayOpacity ?? 0.8} 
                 onChange={(e) => onUpdate(block.id, { ...block.data, overlayOpacity: parseFloat(e.target.value) })}
-                className="w-20"
+                className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+              
+              <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase mt-2">
+                 <span>Tinggi Banner</span>
+                 <span>{height}px</span>
+              </div>
+              <input 
+                type="range" 
+                min="200" 
+                max="1000" 
+                step="50" 
+                value={height} 
+                onChange={(e) => onUpdate(block.id, { ...block.data, height: parseInt(e.target.value) })}
+                className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               />
            </div>
            <FontSizeControl value={block.data.fontSize} onChange={(v) => onUpdate(block.id, { ...block.data, fontSize: v })} />
@@ -122,15 +257,48 @@ export const HeroRenderer: React.FC<{ block: HeroBlock } & RendererProps> = ({ b
   );
 };
 
+export const HistoryRenderer: React.FC<{ block: HistoryBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
+  return (
+    <div className="py-16 px-8 bg-amber-50/50 relative border-y border-amber-100">
+       {isPreview ? (
+         <>
+           <h2 className="text-4xl font-serif font-bold text-center mb-10 text-amber-900 border-b-2 border-amber-200 pb-4 mx-auto max-w-3xl">{block.data.title}</h2>
+           <div className="prose prose-lg prose-amber max-w-4xl mx-auto text-justify font-serif leading-loose whitespace-pre-wrap text-gray-800">
+             {block.data.body}
+           </div>
+         </>
+       ) : (
+         <div className="flex flex-col gap-6 max-w-4xl mx-auto">
+           <input 
+             value={block.data.title} 
+             onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})}
+             className="text-4xl font-serif font-bold text-center w-full bg-transparent border-b-2 border-amber-200 outline-none pb-2 text-amber-900 placeholder-amber-900/30"
+             placeholder="Tajuk Sejarah (Contoh: Sejarah Sekolah)"
+           />
+           <div className="relative">
+             <label className="absolute -top-6 left-0 text-xs font-bold text-amber-700/50 uppercase tracking-widest">Kandungan Sejarah</label>
+             <textarea 
+               value={block.data.body} 
+               onChange={e => onUpdate(block.id, {...block.data, body: e.target.value})}
+               className="w-full h-[500px] p-6 bg-white border-2 border-amber-100 rounded-xl font-serif text-lg leading-relaxed focus:border-amber-300 focus:ring-4 ring-amber-100 outline-none resize-y shadow-sm"
+               placeholder="Tulis atau tampal teks sejarah sekolah di sini. Gunakan 'Enter' untuk perenggan baru."
+             />
+           </div>
+         </div>
+       )}
+    </div>
+  )
+}
+
 export const ContentRenderer: React.FC<{ block: ContentBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
   return (
-    <div className={`py-16 px-8 max-w-5xl mx-auto text-${block.data.alignment} flex flex-col relative group`}>
+    <div className={`py-12 px-8 h-full flex flex-col justify-center text-${block.data.alignment} relative group`}>
       {!isPreview && (
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
            <FontSizeControl value={block.data.fontSize} onChange={(v) => onUpdate(block.id, { ...block.data, fontSize: v })} />
         </div>
       )}
-      <div className="mb-8 w-full">
+      <div className="mb-6 w-full">
         {isPreview ? <h2 className={`${getSizeClass(block.data.fontSize, 'title').replace('text-6xl','text-4xl')} font-bold text-gray-800 mb-2 border-b-4 border-secondary inline-block pb-1`}>{block.data.title}</h2> : <input value={block.data.title} onChange={(e) => onUpdate(block.id, { ...block.data, title: e.target.value })} className={`${getSizeClass(block.data.fontSize, 'title').replace('text-6xl','text-4xl')} font-bold text-gray-800 w-full bg-transparent border-b-2 border-dashed border-blue-100 focus:border-primary outline-none text-${block.data.alignment} py-2 transition-all`} placeholder="Tajuk Artikel" onClick={e=>e.stopPropagation()} />}
       </div>
       <div className="relative w-full">
@@ -149,8 +317,9 @@ export const ContentRenderer: React.FC<{ block: ContentBlock } & RendererProps> 
 
 export const DividerRenderer: React.FC<{ block: DividerBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
   return (
-    <div className="py-4 px-8 w-full group relative">
+    <div className="py-4 px-8 w-full group relative flex items-center justify-center h-full">
       <hr 
+        className="w-full"
         style={{ 
           borderTopStyle: block.data.style, 
           borderColor: block.data.color, 
@@ -225,7 +394,6 @@ export const OrgChartRenderer: React.FC<{ block: OrgChartBlock } & RendererProps
     setDraggedIdx(null);
   };
 
-  // Font size scaler
   const fs = block.data.fontSize || 'md';
   const nameSize = fs === 'sm' ? 'text-sm' : fs === 'md' ? 'text-lg' : fs === 'lg' ? 'text-xl' : 'text-2xl';
   const roleSize = fs === 'sm' ? 'text-[10px]' : fs === 'md' ? 'text-xs' : fs === 'lg' ? 'text-sm' : 'text-base';
@@ -313,44 +481,33 @@ export const OrgChartRenderer: React.FC<{ block: OrgChartBlock } & RendererProps
 
 export const FeatureRenderer: React.FC<{ block: FeatureBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
   return (
-    <div className="py-12 px-4 max-w-7xl mx-auto group relative">
+    <div className="py-8 px-4 group relative">
        {!isPreview && (
         <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
            <FontSizeControl value={block.data.fontSize} onChange={(v) => onUpdate(block.id, { ...block.data, fontSize: v })} />
         </div>
       )}
-      <div className="text-center mb-12">
-         {isPreview ? <h2 className={`${getSizeClass(block.data.fontSize, 'title').replace('text-6xl','text-4xl')} font-bold`}>{block.data.title}</h2> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="text-center w-full font-bold text-3xl border-b border-dashed border-gray-300 outline-none" placeholder="Tajuk Ciri" />}
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {block.data.features.map((feature, idx) => (
-          <div key={idx} className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col items-center text-center relative group/item">
-            <div className="mb-4 text-primary p-3 bg-blue-50 rounded-full">
-               {getIconByName(feature.icon, "w-8 h-8")}
+      {isPreview ? (
+        <h2 className={`${getSizeClass(block.data.fontSize, 'title').replace('text-6xl','text-3xl')} font-bold text-center mb-8`}>{block.data.title}</h2>
+      ) : (
+        <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className={`${getSizeClass(block.data.fontSize, 'title').replace('text-6xl','text-3xl')} w-full text-center font-bold mb-8 border-b border-dashed outline-none bg-transparent`} placeholder="Title" />
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {block.data.features.map((f, i) => (
+          <div key={i} className="p-4 border rounded-lg text-center bg-white shadow-sm hover:shadow-md transition-shadow relative group/item">
+            {!isPreview && <button onClick={()=> {const nf=[...block.data.features]; nf.splice(i,1); onUpdate(block.id, {...block.data, features: nf})}} className="absolute top-1 right-1 text-red-400 opacity-0 group-hover/item:opacity-100"><Icons.X size={14}/></button>}
+            <div className="mx-auto mb-3 w-12 h-12 flex items-center justify-center bg-primary/10 text-primary rounded-full">
+               {getIconByName(f.icon, "w-6 h-6")}
             </div>
-            {isPreview ? (
-              <>
-                <h3 className="font-bold text-xl mb-2">{feature.title}</h3>
-                <p className="text-gray-600 text-sm">{feature.description}</p>
-                {feature.link && <a href={feature.link} className="mt-4 text-primary font-bold text-xs hover:underline uppercase tracking-wide">Buka Pautan &rarr;</a>}
-              </>
-            ) : (
-              <div className="flex flex-col w-full gap-2">
-                 <input value={feature.title} onChange={e => { const newF = [...block.data.features]; newF[idx].title = e.target.value; onUpdate(block.id, {...block.data, features: newF}) }} className="text-center font-bold border rounded p-1" placeholder="Title" onClick={e=>e.stopPropagation()} />
-                 <textarea value={feature.description} onChange={e => { const newF = [...block.data.features]; newF[idx].description = e.target.value; onUpdate(block.id, {...block.data, features: newF}) }} className="text-center border rounded p-1 text-xs" placeholder="Desc" onClick={e=>e.stopPropagation()} />
-                 <select value={feature.icon} onChange={e => { const newF = [...block.data.features]; newF[idx].icon = e.target.value; onUpdate(block.id, {...block.data, features: newF}) }} className="text-xs border rounded" onClick={e=>e.stopPropagation()}>
-                    {iconList.map(i => <option key={i} value={i}>{i}</option>)}
-                 </select>
-                 <input value={feature.link || ''} onChange={e => { const newF = [...block.data.features]; newF[idx].link = e.target.value; onUpdate(block.id, {...block.data, features: newF}) }} className="text-center text-xs border rounded p-1" placeholder="Link (Optional)" onClick={e=>e.stopPropagation()} />
-                 <button onClick={(e) => { e.stopPropagation(); const newF = block.data.features.filter((_, i) => i !== idx); onUpdate(block.id, {...block.data, features: newF}) }} className="text-red-500 text-xs">Remove</button>
-              </div>
-            )}
+            {isPreview ? <h3 className="font-bold mb-1">{f.title}</h3> : <input value={f.title} onChange={e => {const nf=[...block.data.features]; nf[i].title=e.target.value; onUpdate(block.id, {...block.data, features: nf})}} className="text-center font-bold w-full border-b border-transparent hover:border-gray-200 outline-none mb-1" />}
+            {isPreview ? <p className="text-sm text-gray-600">{f.description}</p> : <textarea value={f.description} onChange={e => {const nf=[...block.data.features]; nf[i].description=e.target.value; onUpdate(block.id, {...block.data, features: nf})}} className="text-center text-sm w-full border-b border-transparent hover:border-gray-200 outline-none resize-none" />}
+            {isPreview && f.link && <a href={f.link} target="_blank" rel="noreferrer" className="inline-block mt-2 text-primary text-xs font-bold hover:underline">Buka Pautan &rarr;</a>}
+            {!isPreview && <input value={f.link||''} placeholder="URL Pautan..." onChange={e => {const nf=[...block.data.features]; nf[i].link=e.target.value; onUpdate(block.id, {...block.data, features: nf})}} className="text-center text-xs w-full mt-2 text-blue-500" />}
           </div>
         ))}
         {!isPreview && (
-          <button onClick={() => onUpdate(block.id, {...block.data, features: [...block.data.features, { title: 'New Feature', description: 'Desc', icon: 'Star' }]})} className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 hover:text-primary hover:border-primary hover:bg-gray-50 transition-all min-h-[200px]">
-            <Icons.Plus size={32} />
-            <span className="font-bold mt-2">Add Feature</span>
+          <button onClick={() => onUpdate(block.id, {...block.data, features: [...block.data.features, {title: "Baru", description: "Desc", icon: "Star"}]})} className="p-4 border-2 border-dashed rounded-lg flex items-center justify-center text-gray-400 hover:text-primary hover:border-primary">
+            <Icons.Plus />
           </button>
         )}
       </div>
@@ -360,813 +517,553 @@ export const FeatureRenderer: React.FC<{ block: FeatureBlock } & RendererProps> 
 
 export const GalleryRenderer: React.FC<{ block: GalleryBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
   return (
-    <div className="py-12 px-4 max-w-7xl mx-auto">
-      <div className="text-center mb-8">
-        {isPreview ? <h2 className="text-3xl font-bold">{block.data.title}</h2> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="text-center font-bold text-3xl border-b border-dashed w-full outline-none" placeholder="Tajuk Galeri" />}
-      </div>
-      <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(150px,1fr))] md:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
-        {block.data.images.map((img, idx) => (
-          <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden shadow-md">
-            <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-            {!isPreview && (
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity p-2 gap-2">
-                 <input value={img} onChange={e => { const newImg = [...block.data.images]; newImg[idx] = e.target.value; onUpdate(block.id, {...block.data, images: newImg}) }} className="text-xs w-full rounded p-1" placeholder="Image URL" onClick={e=>e.stopPropagation()} />
-                 <button onClick={e => { e.stopPropagation(); const newImg = block.data.images.filter((_, i) => i !== idx); onUpdate(block.id, {...block.data, images: newImg}) }} className="text-white bg-red-500 p-1 rounded text-xs"><Icons.Trash2 size={12} /></button>
-              </div>
-            )}
-          </div>
-        ))}
-        {!isPreview && (
-          <button onClick={() => onUpdate(block.id, {...block.data, images: [...block.data.images, 'https://picsum.photos/400']})} className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl text-gray-400 hover:text-primary hover:bg-gray-50">
-            <Icons.Plus size={32} />
-            <span>Add Image</span>
-          </button>
-        )}
-      </div>
+    <div className="py-8 px-4">
+       {isPreview ? <h2 className="text-2xl font-bold text-center mb-6">{block.data.title}</h2> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="w-full text-center text-2xl font-bold mb-6 bg-transparent outline-none" />}
+       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+         {block.data.images.map((url, i) => (
+           <div key={i} className="relative aspect-square rounded-xl overflow-hidden group">
+             <img src={url} alt="" className="w-full h-full object-cover" />
+             {!isPreview && (
+               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                  <input value={url} onChange={e=>{const ni=[...block.data.images]; ni[i]=e.target.value; onUpdate(block.id, {...block.data, images: ni})}} className="w-11/12 text-xs p-1 rounded" />
+                  <button onClick={()=>{const ni=[...block.data.images]; ni.splice(i,1); onUpdate(block.id, {...block.data, images: ni})}} className="bg-red-500 text-white p-1 rounded"><Icons.Trash2 size={14}/></button>
+               </div>
+             )}
+           </div>
+         ))}
+         {!isPreview && <button onClick={()=>onUpdate(block.id, {...block.data, images: [...block.data.images, 'https://picsum.photos/400']})} className="aspect-square border-2 border-dashed rounded-xl flex items-center justify-center text-gray-400 hover:text-primary hover:border-primary"><Icons.Plus/></button>}
+       </div>
     </div>
   )
 }
 
 export const ContactRenderer: React.FC<{ block: ContactBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  const isIframeCode = block.data.mapUrl && block.data.mapUrl.includes('<iframe');
-
-  return (
-    <div className="py-16 px-4 bg-gray-900 text-white">
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
-        <div className="flex flex-col justify-center">
-          {isPreview ? <h2 className="text-4xl font-bold mb-6">{block.data.title}</h2> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="bg-transparent text-4xl font-bold mb-6 border-b border-gray-700 outline-none w-full" />}
-          
-          <div className="space-y-6">
-            <div className="flex items-start gap-4">
-              <div className="bg-primary/20 p-3 rounded-full text-primary"><Icons.MapPin /></div>
-              <div>
-                <h3 className="font-bold mb-1 text-gray-400 uppercase text-xs">Alamat</h3>
-                {isPreview ? <p className="text-lg">{block.data.address}</p> : <textarea value={block.data.address} onChange={e => onUpdate(block.id, {...block.data, address: e.target.value})} className="bg-gray-800 rounded p-2 w-full text-white" />}
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="bg-primary/20 p-3 rounded-full text-primary"><Icons.Phone /></div>
-              <div>
-                <h3 className="font-bold mb-1 text-gray-400 uppercase text-xs">Telefon</h3>
-                {isPreview ? <p className="text-lg">{block.data.phone}</p> : <input value={block.data.phone} onChange={e => onUpdate(block.id, {...block.data, phone: e.target.value})} className="bg-gray-800 rounded p-2 w-full text-white" />}
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="bg-primary/20 p-3 rounded-full text-primary"><Icons.Mail /></div>
-              <div>
-                <h3 className="font-bold mb-1 text-gray-400 uppercase text-xs">Emel</h3>
-                {isPreview ? <p className="text-lg">{block.data.email}</p> : <input value={block.data.email} onChange={e => onUpdate(block.id, {...block.data, email: e.target.value})} className="bg-gray-800 rounded p-2 w-full text-white" />}
-              </div>
-            </div>
-          </div>
+   return (
+     <div className="py-12 px-8 bg-gray-50 flex flex-col md:flex-row gap-8">
+        <div className="flex-1 space-y-4">
+           {isPreview ? <h2 className="text-3xl font-bold text-gray-800">{block.data.title}</h2> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="text-3xl font-bold bg-transparent w-full" />}
+           
+           <div className="flex items-start gap-3 text-gray-600">
+             <Icons.MapPin className="shrink-0 mt-1" />
+             {isPreview ? <p>{block.data.address}</p> : <textarea value={block.data.address} onChange={e=>onUpdate(block.id, {...block.data, address: e.target.value})} className="w-full bg-transparent border rounded p-1" />}
+           </div>
+           <div className="flex items-center gap-3 text-gray-600">
+             <Icons.Phone className="shrink-0" />
+             {isPreview ? <p>{block.data.phone}</p> : <input value={block.data.phone} onChange={e=>onUpdate(block.id, {...block.data, phone: e.target.value})} className="w-full bg-transparent border rounded p-1" />}
+           </div>
+           <div className="flex items-center gap-3 text-gray-600">
+             <Icons.Mail className="shrink-0" />
+             {isPreview ? <p>{block.data.email}</p> : <input value={block.data.email} onChange={e=>onUpdate(block.id, {...block.data, email: e.target.value})} className="w-full bg-transparent border rounded p-1" />}
+           </div>
         </div>
-        <div className="h-[400px] bg-gray-800 rounded-2xl overflow-hidden relative group">
-           {isIframeCode ? (
-             <div 
-               className="w-full h-full [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
-               dangerouslySetInnerHTML={{ __html: block.data.mapUrl }} 
-             />
-           ) : block.data.mapUrl ? (
-             <iframe src={block.data.mapUrl} className="w-full h-full border-0" allowFullScreen loading="lazy"></iframe>
+        <div className="flex-1 h-64 bg-gray-200 rounded-xl overflow-hidden relative group">
+           {block.data.mapUrl ? (
+             <div className="w-full h-full" dangerouslySetInnerHTML={{__html: block.data.mapUrl}} />
            ) : (
-             <div className="w-full h-full flex items-center justify-center text-gray-500">Tiada Peta</div>
+             <div className="w-full h-full flex items-center justify-center text-gray-400">Tiada Peta</div>
            )}
-
-           {!isPreview && (
-             <div className="absolute top-4 right-4 w-full max-w-sm">
-               <textarea 
-                 value={block.data.mapUrl} 
-                 onChange={e => onUpdate(block.id, {...block.data, mapUrl: e.target.value})} 
-                 className="w-full bg-white text-black p-2 rounded-lg text-xs shadow-lg h-24 font-mono opacity-20 group-hover:opacity-100 transition-opacity focus:opacity-100" 
-                 placeholder="Paste Google Maps Embed HTML Code (<iframe...>)" 
-               />
-             </div>
-           )}
+           {!isPreview && <textarea value={block.data.mapUrl} onChange={e=>onUpdate(block.id, {...block.data, mapUrl: e.target.value})} className="absolute inset-0 w-full h-full opacity-0 group-hover:opacity-100 bg-white/90 p-4 text-xs font-mono border-2 border-primary" placeholder="Paste iframe embed code here..." />}
         </div>
-      </div>
-    </div>
-  )
+     </div>
+   )
 }
 
 export const FooterRenderer: React.FC<{ block: FooterBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
   return (
-    <div className="bg-gray-950 py-8 text-center text-gray-500 text-sm">
-      {isPreview ? <p>{block.data.copyright}</p> : <input value={block.data.copyright} onChange={e => onUpdate(block.id, {...block.data, copyright: e.target.value})} className="bg-transparent text-center w-full border-b border-gray-800 outline-none" />}
+    <div className="py-6 px-4 bg-gray-900 text-white text-center">
+       {isPreview ? <p className="text-sm opacity-70">{block.data.copyright}</p> : <input value={block.data.copyright} onChange={e=>onUpdate(block.id, {...block.data, copyright: e.target.value})} className="bg-transparent text-center w-full text-sm text-gray-300" />}
     </div>
   )
 }
 
 export const HtmlRenderer: React.FC<{ block: HtmlBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  return (
-    <div className="w-full" style={{ height: isPreview ? block.data.height : 'auto' }}>
-      {isPreview ? (
-        <div dangerouslySetInnerHTML={{ __html: block.data.code }} />
-      ) : (
-        <div className="p-4 bg-gray-100 border rounded-lg">
-           <div className="flex justify-between mb-2">
-             <span className="font-bold text-xs text-gray-500">HTML Code Editor</span>
-             <input value={block.data.height} onChange={e => onUpdate(block.id, {...block.data, height: e.target.value})} className="text-xs border rounded px-1 w-20" placeholder="Height" />
-           </div>
-           <textarea value={block.data.code} onChange={e => onUpdate(block.id, {...block.data, code: e.target.value})} className="w-full h-48 font-mono text-xs p-2 border rounded" placeholder="<div>Your HTML here</div>" />
-        </div>
-      )}
-    </div>
-  )
+   return (
+     <div className="w-full relative group" style={{ minHeight: block.data.height || '100px' }}>
+       {isPreview ? (
+         <div dangerouslySetInnerHTML={{ __html: block.data.code }} />
+       ) : (
+         <div className="p-4 border-2 border-dashed border-gray-300 rounded bg-gray-50">
+           <div className="text-xs font-bold text-gray-400 mb-2">HTML EMBED</div>
+           <textarea value={block.data.code} onChange={e=>onUpdate(block.id, {...block.data, code: e.target.value})} className="w-full h-32 font-mono text-xs p-2 border rounded" placeholder="<code>...</code>" />
+           <input value={block.data.height} onChange={e=>onUpdate(block.id, {...block.data, height: e.target.value})} placeholder="Height (e.g. 200px)" className="mt-2 text-xs border rounded p-1" />
+         </div>
+       )}
+     </div>
+   )
 }
 
 export const DriveRenderer: React.FC<{ block: DriveBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  return (
-    <div className="w-full py-8 px-4">
-      {isPreview ? (
-         <div className="max-w-5xl mx-auto bg-white shadow-lg rounded-xl overflow-hidden" style={{ height: block.data.height }}>
-           <h3 className="bg-gray-50 p-3 border-b font-bold text-gray-700 flex items-center gap-2"><Icons.Drive size={18} /> {block.data.title}</h3>
-           {block.data.embedUrl ? <iframe src={block.data.embedUrl} className="w-full h-full" /> : <div className="h-full flex items-center justify-center text-gray-400">Tiada Dokumen</div>}
-         </div>
-      ) : (
-        <div className="p-4 border rounded bg-gray-50">
-          <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="w-full border p-2 mb-2 rounded" placeholder="Document Title" />
-          <input value={block.data.embedUrl} onChange={e => onUpdate(block.id, {...block.data, embedUrl: e.target.value})} className="w-full border p-2 mb-2 rounded" placeholder="Google Drive Embed URL" />
-          <input value={block.data.height} onChange={e => onUpdate(block.id, {...block.data, height: e.target.value})} className="w-full border p-2 rounded" placeholder="Height (e.g., 500px)" />
+   return (
+     <div className="w-full flex flex-col items-center py-4">
+        {isPreview ? <h3 className="font-bold mb-2">{block.data.title}</h3> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="text-center font-bold mb-2 bg-transparent" placeholder="Tajuk Dokumen" />}
+        <div className="w-full border rounded-xl overflow-hidden relative group" style={{ height: block.data.height || '500px' }}>
+           {block.data.embedUrl ? <iframe src={block.data.embedUrl} className="w-full h-full border-0" /> : <div className="flex items-center justify-center h-full bg-gray-100 text-gray-400">Tiada Dokumen</div>}
+           {!isPreview && (
+             <div className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center p-8 transition-opacity">
+               <input value={block.data.embedUrl} onChange={e=>onUpdate(block.id, {...block.data, embedUrl: e.target.value})} className="w-full border p-2 mb-2" placeholder="Google Drive Embed URL" />
+               <input value={block.data.height} onChange={e=>onUpdate(block.id, {...block.data, height: e.target.value})} className="w-32 border p-2" placeholder="Height (500px)" />
+             </div>
+           )}
         </div>
-      )}
-    </div>
-  )
+     </div>
+   )
 }
 
 export const VideoRenderer: React.FC<{ block: VideoBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  const getEmbedUrl = (url: string) => {
-    if (!url) return '';
-    // Already an embed URL?
-    if (url.includes('/embed/')) return url;
-    
-    let videoId = '';
-    
-    try {
-        // Handle standard youtube.com/watch?v=...
-        if (url.includes('v=')) {
-            // Split by v= and then take the first part before any ampersand
-            videoId = url.split('v=')[1].split('&')[0];
-        } 
-        // Handle short youtu.be/ID
-        else if (url.includes('youtu.be/')) {
-            videoId = url.split('youtu.be/')[1].split('?')[0];
-        }
-    } catch (e) {
-        console.error("Error parsing YouTube URL", e);
-    }
-    
-    return videoId ? `https://www.youtube.com/embed/${videoId}` : '';
-  };
-
-  const embedUrl = getEmbedUrl(block.data.url);
-
-  return (
-    <div className="py-12 px-4 bg-black">
-       <div className="max-w-4xl mx-auto">
-          {!isPreview && <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="w-full bg-gray-900 text-white p-2 mb-4 rounded" placeholder="Video Title" />}
-          <div className="aspect-video bg-gray-800 rounded-xl overflow-hidden relative shadow-2xl border border-gray-700">
-             {embedUrl ? (
-               <iframe 
-                 src={embedUrl} 
-                 className="w-full h-full" 
-                 title={block.data.title || "YouTube video player"}
-                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                 allowFullScreen
-                 frameBorder="0"
-               ></iframe>
-             ) : (
-               <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 gap-4">
-                  <Icons.Video size={48} className="opacity-50" />
-                  <p>Masukkan URL YouTube yang sah</p>
-               </div>
-             )}
-          </div>
-          {!isPreview && (
-             <div className="mt-4">
-               <label className="text-xs text-gray-400 font-bold ml-1 uppercase">URL YouTube</label>
-               <input value={block.data.url} onChange={e => onUpdate(block.id, {...block.data, url: e.target.value})} className="w-full mt-1 bg-gray-900 text-white p-2 rounded border border-gray-700 focus:border-primary outline-none" placeholder="https://www.youtube.com/watch?v=..." />
-               <p className="text-[10px] text-gray-500 mt-1 ml-1">Menyokong pautan biasa dan pautan 'youtu.be'.</p>
+   const getEmbed = (url: string) => {
+     if(!url) return '';
+     if(url.includes('youtube.com') || url.includes('youtu.be')) {
+       const id = url.split('v=')[1] || url.split('/').pop();
+       return `https://www.youtube.com/embed/${id}`;
+     }
+     return url;
+   }
+   return (
+     <div className="py-8 px-4 max-w-4xl mx-auto">
+        {isPreview ? <h3 className="text-xl font-bold mb-4 text-center">{block.data.title}</h3> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="w-full text-center text-xl font-bold mb-4 bg-transparent" placeholder="Tajuk Video" />}
+        <div className="aspect-video bg-black rounded-xl overflow-hidden relative group">
+           <iframe src={getEmbed(block.data.url)} className="w-full h-full" allowFullScreen />
+           {!isPreview && (
+             <div className="absolute top-2 right-2 p-2 bg-white rounded shadow opacity-0 group-hover:opacity-100">
+               <input value={block.data.url} onChange={e=>onUpdate(block.id, {...block.data, url: e.target.value})} placeholder="YouTube URL" className="text-xs p-1 w-48 border rounded" />
              </div>
-          )}
-       </div>
-    </div>
-  )
+           )}
+        </div>
+     </div>
+   )
 }
 
 export const ImageRenderer: React.FC<{ block: ImageBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  const widthClass = block.data.width === 'full' ? 'max-w-full' : block.data.width === 'large' ? 'max-w-5xl' : block.data.width === 'medium' ? 'max-w-3xl' : 'max-w-xl';
-  const animClass = block.data.animation === 'zoom' ? 'hover:scale-105 transition-transform duration-700' : block.data.animation === 'pan' ? 'hover:object-left transition-all duration-1000' : '';
-  
-  return (
-    <div className="py-12 px-4 flex flex-col items-center">
-      <div className={`w-full ${widthClass} overflow-hidden rounded-2xl shadow-xl relative group`}>
-        <img src={block.data.url} alt={block.data.caption} className={`w-full h-auto object-cover ${animClass}`} />
-        {(block.data.caption || !isPreview) && (
-          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-6 pt-12 text-white">
-            {isPreview ? <p className="font-medium text-lg text-center">{block.data.caption}</p> : <input value={block.data.caption} onChange={e => onUpdate(block.id, {...block.data, caption: e.target.value})} className="bg-transparent text-center w-full outline-none text-white" placeholder="Kapsyen Gambar" />}
+   const widthClass = block.data.width === 'small' ? 'max-w-sm' : block.data.width === 'medium' ? 'max-w-2xl' : block.data.width === 'large' ? 'max-w-5xl' : 'w-full';
+   const animClass = block.data.animation === 'zoom' ? 'hover:scale-105 transition-transform duration-700' : '';
+   
+   return (
+     <div className="py-8 px-4 flex flex-col items-center relative group">
+        <div className={`${widthClass} rounded-2xl overflow-hidden shadow-lg`}>
+          <img src={block.data.url} alt={block.data.caption} className={`w-full h-auto ${animClass}`} />
+        </div>
+        {block.data.caption && (
+           isPreview ? <p className="mt-2 text-sm text-gray-500 italic">{block.data.caption}</p> : <input value={block.data.caption} onChange={e=>onUpdate(block.id, {...block.data, caption: e.target.value})} className="mt-2 text-center text-sm italic bg-transparent w-full" />
+        )}
+        {!isPreview && (
+          <div className="absolute top-4 right-4 bg-white p-2 rounded shadow opacity-0 group-hover:opacity-100 flex flex-col gap-2">
+             <input value={block.data.url} onChange={e=>onUpdate(block.id, {...block.data, url: e.target.value})} className="text-xs border p-1 rounded" placeholder="Image URL" />
+             <select value={block.data.width} onChange={e=>onUpdate(block.id, {...block.data, width: e.target.value})} className="text-xs border p-1 rounded">
+                <option value="small">Kecil</option>
+                <option value="medium">Sederhana</option>
+                <option value="large">Besar</option>
+                <option value="full">Penuh</option>
+             </select>
+             <select value={block.data.animation} onChange={e=>onUpdate(block.id, {...block.data, animation: e.target.value})} className="text-xs border p-1 rounded">
+                <option value="none">Tiada Animasi</option>
+                <option value="zoom">Zoom</option>
+             </select>
           </div>
         )}
-        {!isPreview && <ImageControl label="Gambar" url={block.data.url} onChange={(v) => onUpdate(block.id, {...block.data, url: v})} />}
-      </div>
-      {!isPreview && (
-        <div className="mt-4 flex gap-2">
-           <select value={block.data.width} onChange={e => onUpdate(block.id, {...block.data, width: e.target.value})} className="border rounded p-1 text-sm">
-             <option value="small">Kecil</option>
-             <option value="medium">Sederhana</option>
-             <option value="large">Besar</option>
-             <option value="full">Penuh</option>
-           </select>
-           <select value={block.data.animation} onChange={e => onUpdate(block.id, {...block.data, animation: e.target.value})} className="border rounded p-1 text-sm">
-             <option value="none">Tiada Animasi</option>
-             <option value="zoom">Zoom on Hover</option>
-           </select>
-        </div>
-      )}
-    </div>
-  )
+     </div>
+   )
 }
 
 export const TickerRenderer: React.FC<{ block: TickerBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  const [currentDate, setCurrentDate] = useState("");
-
-  useEffect(() => {
-    // Format date as dd/mm/yyyy
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = now.getFullYear();
-    setCurrentDate(`${day}/${month}/${year}`);
-  }, []);
-
-  return (
-    <div className="bg-primary text-white overflow-hidden flex items-stretch h-10 shadow-md">
-       <div className="bg-secondary text-primary font-black px-4 flex items-center shrink-0 text-sm uppercase tracking-wider relative z-10 gap-2">
-         {isPreview ? block.data.label : <input value={block.data.label} onChange={e => onUpdate(block.id, {...block.data, label: e.target.value})} className="bg-transparent w-24 outline-none font-bold" />}
-         <span className="text-[10px] font-mono opacity-80 border-l border-primary/20 pl-2 hidden md:block">{currentDate}</span>
-       </div>
-       <div className="flex-1 flex items-center bg-primary overflow-hidden relative">
-         {isPreview ? (
-           <div className="whitespace-nowrap animate-marquee px-4" style={{ animationDuration: `${30 - block.data.speed}s` }}>
-             {block.data.text} &nbsp;&nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp;&nbsp; {block.data.text} &nbsp;&nbsp;&nbsp;&nbsp; • &nbsp;&nbsp;&nbsp;&nbsp; {block.data.text}
+   return (
+     <div className="bg-primary text-white py-2 overflow-hidden flex relative group">
+        <div className="bg-secondary text-primary font-bold px-4 py-1 z-10 shrink-0 shadow-lg flex items-center">
+           {isPreview ? block.data.label : <input value={block.data.label} onChange={e=>onUpdate(block.id, {...block.data, label: e.target.value})} className="bg-transparent w-20 text-center font-bold text-primary" />}
+        </div>
+        <div className="flex-1 overflow-hidden relative flex items-center">
+           <div className="animate-marquee whitespace-nowrap pl-full" style={{ animationDuration: `${30 - (block.data.speed || 15)}s` }}>
+              {isPreview ? <span className="inline-block px-4">{block.data.text}</span> : <input value={block.data.text} onChange={e=>onUpdate(block.id, {...block.data, text: e.target.value})} className="bg-transparent text-white w-96" />}
            </div>
-         ) : (
-           <input value={block.data.text} onChange={e => onUpdate(block.id, {...block.data, text: e.target.value})} className="w-full bg-transparent outline-none px-4 text-white" placeholder="Teks Ticker" />
-         )}
-       </div>
-    </div>
-  )
+        </div>
+     </div>
+   )
 }
 
 export const StatsRenderer: React.FC<{ block: StatsBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
   return (
-    <div className="py-16 bg-blue-50">
-       <div className="max-w-6xl mx-auto px-4">
-         {isPreview ? <h2 className="text-3xl font-bold text-center mb-12 text-blue-900">{block.data.title}</h2> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="block w-full text-center text-3xl font-bold mb-12 bg-transparent outline-none" />}
-         
-         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-           {block.data.items.map((item, idx) => (
-             <div key={idx} className="bg-white p-6 rounded-2xl shadow-sm text-center border border-blue-100">
-               <div className="text-secondary mx-auto mb-4 flex justify-center">{getIconByName(item.icon, "w-8 h-8")}</div>
-               {isPreview ? (
-                 <>
-                   <div className="text-4xl font-black text-gray-800 mb-1">{item.value}</div>
-                   <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">{item.label}</div>
-                 </>
-               ) : (
-                 <div className="flex flex-col gap-2">
-                   <input value={item.value} onChange={e => { const ni = [...block.data.items]; ni[idx].value = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="text-center font-black text-2xl w-full border-b" />
-                   <input value={item.label} onChange={e => { const ni = [...block.data.items]; ni[idx].label = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="text-center text-xs uppercase w-full border-b" />
-                   <select value={item.icon} onChange={e => { const ni = [...block.data.items]; ni[idx].icon = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="text-xs border rounded w-full">
-                      {iconList.map(i => <option key={i} value={i}>{i}</option>)}
-                   </select>
-                   <button onClick={() => { const ni = block.data.items.filter((_, i) => i !== idx); onUpdate(block.id, {...block.data, items: ni}) }} className="text-red-500 text-xs">Remove</button>
-                 </div>
-               )}
+    <div className="py-12 px-4 bg-white">
+       {isPreview ? <h2 className="text-2xl font-bold text-center mb-10">{block.data.title}</h2> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="w-full text-center text-2xl font-bold mb-10 bg-transparent" />}
+       <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-6xl mx-auto">
+          {block.data.items.map((stat, i) => (
+             <div key={stat.id} className="flex flex-col items-center text-center p-4 border rounded-xl relative group/item">
+                {!isPreview && <button onClick={()=>{const ni=[...block.data.items]; ni.splice(i,1); onUpdate(block.id, {...block.data, items: ni})}} className="absolute top-1 right-1 text-red-500 opacity-0 group-hover/item:opacity-100"><Icons.X size={12}/></button>}
+                <div className="text-primary mb-2 bg-blue-50 p-3 rounded-full">{getIconByName(stat.icon, "w-8 h-8")}</div>
+                {isPreview ? <div className="text-3xl font-extrabold text-gray-800">{stat.value}</div> : <input value={stat.value} onChange={e=>{const ni=[...block.data.items]; ni[i].value=e.target.value; onUpdate(block.id, {...block.data, items: ni})}} className="text-center text-3xl font-bold w-full" />}
+                {isPreview ? <div className="text-sm font-medium text-gray-500 uppercase tracking-wide">{stat.label}</div> : <input value={stat.label} onChange={e=>{const ni=[...block.data.items]; ni[i].label=e.target.value; onUpdate(block.id, {...block.data, items: ni})}} className="text-center text-sm w-full" />}
              </div>
-           ))}
-           {!isPreview && <button onClick={() => onUpdate(block.id, {...block.data, items: [...block.data.items, { id: uuidv4(), label: 'LABEL', value: '00', icon: 'Star' }]})} className="border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center p-6 text-gray-400 hover:text-primary hover:bg-white transition-all"><Icons.Plus /></button>}
-         </div>
+          ))}
+          {!isPreview && <button onClick={()=>onUpdate(block.id, {...block.data, items: [...block.data.items, {id: uuidv4(), label: "Label", value: "00", icon: "Star"}]})} className="border-2 border-dashed rounded-xl flex items-center justify-center text-gray-400 p-8 hover:border-primary hover:text-primary"><Icons.Plus/></button>}
        </div>
     </div>
   )
 }
 
 export const TimeRenderer: React.FC<{ block: TimeBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  const [time, setTime] = useState(new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <div className={`py-8 px-8 text-${block.data.alignment}`} style={{ backgroundColor: block.data.bgColor, color: block.data.textColor }}>
-       <div className="font-mono text-5xl font-bold tracking-tight">
-          {time.toLocaleTimeString([], { hour12: block.data.format === '12h' })}
-       </div>
-       {block.data.showDate && <div className="text-lg opacity-80 mt-1 font-medium">{time.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>}
-       
-       {!isPreview && (
-         <div className="mt-4 p-2 bg-white/10 rounded flex gap-4 text-xs">
-           <label className="flex items-center gap-1"><input type="checkbox" checked={block.data.format === '12h'} onChange={e => onUpdate(block.id, {...block.data, format: e.target.checked ? '12h' : '24h'})} /> 12H Format</label>
-           <label className="flex items-center gap-1"><input type="checkbox" checked={block.data.showDate} onChange={e => onUpdate(block.id, {...block.data, showDate: e.target.checked})} /> Show Date</label>
-           <input type="color" value={block.data.bgColor} onChange={e => onUpdate(block.id, {...block.data, bgColor: e.target.value})} />
-           <input type="color" value={block.data.textColor} onChange={e => onUpdate(block.id, {...block.data, textColor: e.target.value})} />
-         </div>
-       )}
-    </div>
-  )
+   const [time, setTime] = useState(new Date());
+   useEffect(() => { const t = setInterval(()=>setTime(new Date()), 1000); return ()=>clearInterval(t); }, []);
+   
+   return (
+     <div className="p-4" style={{ backgroundColor: block.data.bgColor, color: block.data.textColor, textAlign: block.data.alignment }}>
+        <div className="text-3xl font-mono font-bold tracking-widest">
+           {time.toLocaleTimeString([], { hour12: block.data.format === '12h' })}
+        </div>
+        {block.data.showDate && <div className="text-sm opacity-80 mt-1">{time.toLocaleDateString()}</div>}
+        {!isPreview && (
+          <div className="mt-2 flex gap-2 justify-center text-black text-xs">
+             <input type="color" value={block.data.bgColor} onChange={e=>onUpdate(block.id, {...block.data, bgColor: e.target.value})} />
+             <input type="color" value={block.data.textColor} onChange={e=>onUpdate(block.id, {...block.data, textColor: e.target.value})} />
+             <button onClick={()=>onUpdate(block.id, {...block.data, format: block.data.format==='12h'?'24h':'12h'})}>{block.data.format}</button>
+          </div>
+        )}
+     </div>
+   )
 }
 
 export const VisitorRenderer: React.FC<{ block: VisitorBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  return (
-    <div className="p-6 bg-white border border-gray-100 rounded-xl shadow-sm inline-flex items-center gap-4">
-      <div className="bg-green-100 p-3 rounded-full text-green-600 animate-pulse"><Icons.Eye /></div>
-      <div>
-        {isPreview ? <div className="text-xs font-bold text-gray-500 uppercase">{block.data.label}</div> : <input value={block.data.label} onChange={e => onUpdate(block.id, {...block.data, label: e.target.value})} className="text-xs font-bold border-b w-24" />}
-        <div className="text-2xl font-black font-mono tracking-widest text-gray-800">
-           {block.data.count.toLocaleString()}
+   return (
+     <div className="p-4 border rounded-lg bg-white shadow-sm flex items-center justify-between max-w-xs mx-auto">
+        <div className="flex items-center gap-3">
+           <div className="p-2 bg-green-100 text-green-600 rounded-full"><Icons.Eye size={20} /></div>
+           <div>
+              <div className="text-xs text-gray-500 uppercase font-bold">{block.data.label}</div>
+              <div className="text-xl font-bold font-mono">1,234,567</div>
+           </div>
         </div>
-      </div>
-      {block.data.showLiveIndicator && <div className="flex items-center gap-1 text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold animate-pulse"><div className="w-1.5 h-1.5 bg-red-600 rounded-full" /> LIVE</div>}
-    </div>
-  )
+        {block.data.showLiveIndicator && (
+           <div className="flex items-center gap-1 text-xs text-red-500 font-bold animate-pulse">
+              <span className="w-2 h-2 bg-red-500 rounded-full"></span> LIVE
+           </div>
+        )}
+        {!isPreview && <input value={block.data.label} onChange={e=>onUpdate(block.id, {...block.data, label: e.target.value})} className="w-20 text-xs border rounded ml-2" />}
+     </div>
+   )
 }
 
 export const SpeechRenderer: React.FC<{ block: SpeechBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  const alignment = block.data.alignment || 'left';
-  const alignClass = alignment === 'center' ? 'text-center' : alignment === 'justify' ? 'text-justify' : 'text-left';
-
   return (
-    <div className="py-16 px-4 bg-white relative group">
-       {!isPreview && (
-          <div className="absolute top-4 right-4 z-20 flex gap-2">
-             <div className="bg-white p-1 rounded-lg border border-gray-200 flex gap-1 shadow-sm">
-               <button 
-                 onClick={() => onUpdate(block.id, { ...block.data, alignment: 'left' })} 
-                 className={`p-1 rounded ${alignment === 'left' ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
-                 title="Align Left"
-               >
-                 <Icons.AlignLeft size={16} />
-               </button>
-               <button 
-                 onClick={() => onUpdate(block.id, { ...block.data, alignment: 'center' })} 
-                 className={`p-1 rounded ${alignment === 'center' ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
-                 title="Align Center"
-               >
-                 <Icons.AlignCenter size={16} />
-               </button>
-               <button 
-                 onClick={() => onUpdate(block.id, { ...block.data, alignment: 'justify' })} 
-                 className={`p-1 rounded ${alignment === 'justify' ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
-                 title="Justify"
-               >
-                 <Icons.AlignJustify size={16} />
-               </button>
+    <div className="py-12 px-6 bg-white">
+       <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-8 items-center">
+          <div className="w-48 h-56 shrink-0 rounded-xl overflow-hidden shadow-lg border-4 border-white relative group">
+             <img src={block.data.imageUrl} className="w-full h-full object-cover" />
+             {!isPreview && <input value={block.data.imageUrl} onChange={e=>onUpdate(block.id, {...block.data, imageUrl: e.target.value})} className="absolute bottom-0 w-full text-xs p-1 opacity-0 group-hover:opacity-100" />}
+          </div>
+          <div className="flex-1 text-center md:text-left relative group">
+             {isPreview ? <h2 className="text-2xl font-bold text-primary mb-4">{block.data.title}</h2> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="text-2xl font-bold text-primary w-full mb-4 bg-transparent" />}
+             <div className="relative">
+                <Icons.Quote className="absolute -top-4 -left-4 text-gray-200 w-12 h-12 -z-10" />
+                {isPreview ? <p className="text-gray-700 leading-relaxed italic">{block.data.text}</p> : <textarea value={block.data.text} onChange={e=>onUpdate(block.id, {...block.data, text: e.target.value})} className="w-full h-32 bg-transparent border-b border-dashed" />}
              </div>
-             <FontSizeControl value={block.data.fontSize} onChange={(v) => onUpdate(block.id, { ...block.data, fontSize: v })} />
+             <div className="mt-6">
+                {isPreview ? <div className="font-bold">{block.data.authorName}</div> : <input value={block.data.authorName} onChange={e=>onUpdate(block.id, {...block.data, authorName: e.target.value})} className="font-bold w-full bg-transparent" />}
+                {isPreview ? <div className="text-sm text-gray-500">{block.data.authorRole}</div> : <input value={block.data.authorRole} onChange={e=>onUpdate(block.id, {...block.data, authorRole: e.target.value})} className="text-sm text-gray-500 w-full bg-transparent" />}
+             </div>
+             {!isPreview && (
+                <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100">
+                   <FontSizeControl value={block.data.fontSize} onChange={v=>onUpdate(block.id, {...block.data, fontSize: v})} />
+                </div>
+             )}
           </div>
-        )}
-
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12">
-        <div className="w-64 shrink-0 relative">
-          <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl rotate-2 border-4 border-white">
-            <img src={block.data.imageUrl} className="w-full h-full object-cover" alt="Author" />
-          </div>
-          {!isPreview && <div className="absolute inset-0 z-10 flex items-center justify-center"><ImageControl label="Foto" url={block.data.imageUrl} onChange={v => onUpdate(block.id, {...block.data, imageUrl: v})} /></div>}
-        </div>
-        <div className="flex-1 text-center md:text-left relative w-full">
-           {isPreview ? <h2 className="text-3xl font-bold mb-6 text-primary">{block.data.title}</h2> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="text-3xl font-bold mb-6 text-primary w-full border-b outline-none bg-transparent" />}
-           
-           {isPreview ? (
-             <div className={`${getSizeClass(block.data.fontSize, 'body')} text-gray-600 leading-loose italic whitespace-pre-wrap ${alignClass}`}>"{block.data.text}"</div>
-           ) : (
-             <textarea value={block.data.text} onChange={e => onUpdate(block.id, {...block.data, text: e.target.value})} className={`w-full h-48 p-4 bg-gray-50 rounded-xl border border-gray-200 outline-none resize-none ${alignClass}`} />
-           )}
-           
-           <div className="mt-8">
-             {isPreview ? <div className="font-bold text-lg text-gray-900">{block.data.authorName}</div> : <input value={block.data.authorName} onChange={e => onUpdate(block.id, {...block.data, authorName: e.target.value})} className="font-bold text-lg border-b w-full outline-none" placeholder="Nama Penulis" />}
-             {isPreview ? <div className="text-sm font-medium text-gray-400 uppercase tracking-wide">{block.data.authorRole}</div> : <input value={block.data.authorRole} onChange={e => onUpdate(block.id, {...block.data, authorRole: e.target.value})} className="text-sm font-medium text-gray-400 border-b w-full outline-none" placeholder="Jawatan" />}
-           </div>
-        </div>
-      </div>
+       </div>
     </div>
   )
 }
 
 export const CalendarRenderer: React.FC<{ block: CalendarBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  return (
-    <div className="py-12 px-4 max-w-5xl mx-auto">
-      {isPreview ? <h2 className="text-3xl font-bold mb-8 text-center">{block.data.title}</h2> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="text-3xl font-bold mb-8 text-center w-full border-b outline-none bg-transparent" />}
-      
-      <div className="space-y-4">
-        {block.data.events.map((evt, idx) => (
-          <div key={idx} className="flex bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden group">
-            <div className="w-24 bg-primary text-white flex flex-col items-center justify-center p-4 shrink-0">
-               {isPreview ? <span className="text-3xl font-bold leading-none">{evt.date}</span> : <input value={evt.date} onChange={e => { const ne = [...block.data.events]; ne[idx].date = e.target.value; onUpdate(block.id, {...block.data, events: ne}) }} className="w-12 text-center bg-transparent border-b border-white/30 text-white font-bold" />}
-               {isPreview ? <span className="text-xs uppercase font-medium opacity-80 mt-1">{evt.month}</span> : <input value={evt.month} onChange={e => { const ne = [...block.data.events]; ne[idx].month = e.target.value; onUpdate(block.id, {...block.data, events: ne}) }} className="w-12 text-center bg-transparent border-b border-white/30 text-xs mt-1" />}
-            </div>
-            <div className="flex-1 p-4 flex flex-col justify-center">
-               {isPreview ? <h3 className="font-bold text-lg text-gray-800">{evt.title}</h3> : <input value={evt.title} onChange={e => { const ne = [...block.data.events]; ne[idx].title = e.target.value; onUpdate(block.id, {...block.data, events: ne}) }} className="font-bold w-full border-b outline-none" placeholder="Event Title" />}
-               {isPreview ? <p className="text-sm text-gray-500">{evt.desc}</p> : <input value={evt.desc} onChange={e => { const ne = [...block.data.events]; ne[idx].desc = e.target.value; onUpdate(block.id, {...block.data, events: ne}) }} className="text-sm w-full border-b outline-none" placeholder="Description/Location" />}
-            </div>
-            {!isPreview && (
-              <button onClick={() => { const ne = block.data.events.filter((_, i) => i !== idx); onUpdate(block.id, {...block.data, events: ne}) }} className="bg-red-50 text-red-500 px-4 hover:bg-red-100"><Icons.Trash2 size={16} /></button>
-            )}
-          </div>
-        ))}
-        {!isPreview && (
-          <button onClick={() => onUpdate(block.id, {...block.data, events: [...block.data.events, { date: '01', month: 'JAN', title: 'New Event', desc: 'Description' }]})} className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 font-bold flex items-center justify-center gap-2 hover:bg-white hover:text-primary hover:border-primary">
-            <Icons.Plus size={18} /> Tambah Acara
-          </button>
-        )}
-      </div>
-    </div>
-  )
+   return (
+     <div className="py-8 px-4">
+        {isPreview ? <h2 className="text-xl font-bold mb-6 flex items-center gap-2"><Icons.Calendar className="text-primary"/> {block.data.title}</h2> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="text-xl font-bold mb-6 w-full" />}
+        <div className="space-y-3">
+           {block.data.events.map((ev, i) => (
+             <div key={i} className="flex gap-4 bg-white p-3 rounded-lg shadow-sm border border-gray-100 group relative">
+                <div className="bg-primary/10 text-primary rounded-lg p-2 text-center min-w-[60px] flex flex-col justify-center">
+                   {isPreview ? <span className="text-xl font-bold block leading-none">{ev.date}</span> : <input value={ev.date} onChange={e=>{const ne=[...block.data.events]; ne[i].date=e.target.value; onUpdate(block.id, {...block.data, events: ne})}} className="w-full text-center font-bold bg-transparent" />}
+                   {isPreview ? <span className="text-[10px] uppercase font-bold">{ev.month}</span> : <input value={ev.month} onChange={e=>{const ne=[...block.data.events]; ne[i].month=e.target.value; onUpdate(block.id, {...block.data, events: ne})}} className="w-full text-center text-[10px] bg-transparent" />}
+                </div>
+                <div className="flex-1">
+                   {isPreview ? <h4 className="font-bold text-gray-800">{ev.title}</h4> : <input value={ev.title} onChange={e=>{const ne=[...block.data.events]; ne[i].title=e.target.value; onUpdate(block.id, {...block.data, events: ne})}} className="w-full font-bold bg-transparent" />}
+                   {isPreview ? <p className="text-sm text-gray-500">{ev.desc}</p> : <input value={ev.desc} onChange={e=>{const ne=[...block.data.events]; ne[i].desc=e.target.value; onUpdate(block.id, {...block.data, events: ne})}} className="w-full text-sm bg-transparent" />}
+                </div>
+                {!isPreview && <button onClick={()=>{const ne=[...block.data.events]; ne.splice(i,1); onUpdate(block.id, {...block.data, events: ne})}} className="absolute top-2 right-2 text-red-400 opacity-0 group-hover:opacity-100"><Icons.Trash2 size={14}/></button>}
+             </div>
+           ))}
+           {!isPreview && <button onClick={()=>onUpdate(block.id, {...block.data, events: [...block.data.events, {date: '01', month: 'JAN', title: 'Acara', desc: 'Info'}]})} className="w-full py-2 border-2 border-dashed rounded text-gray-400 hover:text-primary"><Icons.Plus className="mx-auto"/></button>}
+        </div>
+     </div>
+   )
 }
 
 export const DownloadsRenderer: React.FC<{ block: DownloadsBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  return (
-    <div className="py-12 px-4 max-w-4xl mx-auto">
-      {isPreview ? <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><Icons.Download className="text-primary" /> {block.data.title}</h2> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="text-2xl font-bold mb-6 w-full border-b bg-transparent outline-none" />}
-      
-      <div className="grid gap-3">
-         {block.data.items.map((item, idx) => (
-           <div key={idx} className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow group">
-             <div className="bg-gray-100 p-2 rounded text-gray-600 font-bold text-xs w-12 text-center">{item.type}</div>
-             <div className="flex-1">
-               {isPreview ? <a href={item.url} className="font-medium text-blue-700 hover:underline">{item.title}</a> : <input value={item.title} onChange={e => { const ni = [...block.data.items]; ni[idx].title = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="font-medium w-full border-b outline-none" />}
+   return (
+     <div className="py-6 px-4 bg-gray-50 rounded-xl">
+        {isPreview ? <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><Icons.Download size={18} /> {block.data.title}</h3> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="font-bold text-lg mb-4 w-full bg-transparent" />}
+        <div className="space-y-2">
+           {block.data.items.map((item, i) => (
+             <div key={i} className="flex items-center justify-between bg-white p-3 rounded border border-gray-200 hover:border-primary transition-colors group relative">
+                <div className="flex items-center gap-3">
+                   <span className={`text-[10px] font-bold px-2 py-1 rounded ${item.type==='PDF'?'bg-red-100 text-red-600':item.type==='DOC'?'bg-blue-100 text-blue-600':'bg-green-100 text-green-600'}`}>{item.type}</span>
+                   {isPreview ? <span className="font-medium text-sm">{item.title}</span> : <input value={item.title} onChange={e=>{const ni=[...block.data.items]; ni[i].title=e.target.value; onUpdate(block.id, {...block.data, items: ni})}} className="bg-transparent" />}
+                </div>
+                <a href={item.url} className="text-gray-400 hover:text-primary"><Icons.Download size={16} /></a>
+                {!isPreview && (
+                  <div className="absolute right-10 flex gap-2 bg-white">
+                     <input value={item.url} onChange={e=>{const ni=[...block.data.items]; ni[i].url=e.target.value; onUpdate(block.id, {...block.data, items: ni})}} className="text-xs border w-32" placeholder="URL" />
+                     <button onClick={()=>{const ni=[...block.data.items]; ni.splice(i,1); onUpdate(block.id, {...block.data, items: ni})}} className="text-red-500"><Icons.Trash2 size={14}/></button>
+                  </div>
+                )}
              </div>
-             {isPreview ? (
-               <a href={item.url} className="p-2 text-gray-400 hover:text-primary bg-gray-50 rounded-full"><Icons.Download size={18} /></a>
-             ) : (
-               <div className="flex gap-2">
-                 <input value={item.url} onChange={e => { const ni = [...block.data.items]; ni[idx].url = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="text-xs border rounded w-32" placeholder="URL" />
-                 <select value={item.type} onChange={e => { const ni = [...block.data.items]; ni[idx].type = e.target.value as any; onUpdate(block.id, {...block.data, items: ni}) }} className="text-xs border rounded">
-                   <option>PDF</option><option>DOC</option><option>FORM</option>
-                 </select>
-                 <button onClick={() => { const ni = block.data.items.filter((_, i) => i !== idx); onUpdate(block.id, {...block.data, items: ni}) }} className="text-red-500"><Icons.Trash2 size={14} /></button>
-               </div>
-             )}
-           </div>
-         ))}
-         {!isPreview && <button onClick={() => onUpdate(block.id, {...block.data, items: [...block.data.items, { title: 'New File', url: '#', type: 'PDF' }]})} className="text-sm text-primary font-bold">+ Add File</button>}
-      </div>
-    </div>
-  )
+           ))}
+           {!isPreview && <button onClick={()=>onUpdate(block.id, {...block.data, items: [...block.data.items, {title: "Fail Baru", url: "#", type: "PDF"}]})} className="w-full py-2 border border-dashed rounded text-xs text-gray-500">Tambah Fail</button>}
+        </div>
+     </div>
+   )
 }
 
 export const FaqRenderer: React.FC<{ block: FaqBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
   return (
-    <div className="py-12 px-4 max-w-4xl mx-auto">
-       <div className="text-center mb-10">
-         {isPreview ? <h2 className="text-3xl font-bold">{block.data.title}</h2> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="text-3xl font-bold text-center w-full border-b bg-transparent outline-none" />}
-       </div>
-       <div className="space-y-4">
-         {block.data.items.map((item, idx) => (
-           <details key={idx} className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-             <summary className="flex justify-between items-center font-medium cursor-pointer list-none p-5 bg-gray-50/50 hover:bg-gray-50 transition-colors">
-               {isPreview ? <span>{item.question}</span> : <input value={item.question} onClick={e => e.preventDefault()} onChange={e => { const ni = [...block.data.items]; ni[idx].question = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="w-full bg-transparent border-b border-dashed outline-none" />}
-               <span className="transition group-open:rotate-180 ml-4"><Icons.ArrowDown size={16} /></span>
-             </summary>
-             <div className="text-gray-600 p-5 border-t border-gray-100 bg-white leading-relaxed">
-               {isPreview ? <p>{item.answer}</p> : (
-                 <div className="flex flex-col gap-2">
-                   <textarea value={item.answer} onChange={e => { const ni = [...block.data.items]; ni[idx].answer = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="w-full p-2 border rounded text-sm" rows={3} />
-                   <button onClick={() => { const ni = block.data.items.filter((_, i) => i !== idx); onUpdate(block.id, {...block.data, items: ni}) }} className="text-red-500 text-xs self-end">Remove Question</button>
-                 </div>
-               )}
-             </div>
-           </details>
-         ))}
-         {!isPreview && <button onClick={() => onUpdate(block.id, {...block.data, items: [...block.data.items, { question: 'Question?', answer: 'Answer.' }]})} className="w-full py-2 bg-gray-100 rounded border border-dashed text-gray-500 hover:bg-gray-200">Add Question</button>}
+    <div className="py-8 px-4">
+       {isPreview ? <h2 className="text-2xl font-bold text-center mb-8">{block.data.title}</h2> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="text-2xl font-bold w-full text-center mb-8 bg-transparent" />}
+       <div className="space-y-4 max-w-3xl mx-auto">
+          {block.data.items.map((item, i) => (
+             <details key={i} className="group bg-white border border-gray-200 rounded-lg overflow-hidden open:ring-2 open:ring-primary/10">
+                <summary className="flex items-center justify-between p-4 cursor-pointer font-bold text-gray-800 hover:bg-gray-50 relative">
+                   {isPreview ? <span>{item.question}</span> : <input value={item.question} onClick={e=>e.preventDefault()} onChange={e=>{const ni=[...block.data.items]; ni[i].question=e.target.value; onUpdate(block.id, {...block.data, items: ni})}} className="w-full bg-transparent" />}
+                   <Icons.ChevronDown className="group-open:rotate-180 transition-transform" />
+                   {!isPreview && <button onClick={(e)=>{e.preventDefault(); const ni=[...block.data.items]; ni.splice(i,1); onUpdate(block.id, {...block.data, items: ni})}} className="absolute right-10 text-red-500"><Icons.Trash2 size={14}/></button>}
+                </summary>
+                <div className="p-4 pt-0 text-gray-600 leading-relaxed border-t border-gray-100">
+                   {isPreview ? <p>{item.answer}</p> : <textarea value={item.answer} onChange={e=>{const ni=[...block.data.items]; ni[i].answer=e.target.value; onUpdate(block.id, {...block.data, items: ni})}} className="w-full h-20 bg-transparent border-none resize-none" />}
+                </div>
+             </details>
+          ))}
+          {!isPreview && <button onClick={()=>onUpdate(block.id, {...block.data, items: [...block.data.items, {question: "Soalan?", answer: "Jawapan..."}]})} className="w-full py-3 border-2 border-dashed rounded text-gray-400">Tambah Soalan</button>}
        </div>
     </div>
   )
 }
 
 export const CtaRenderer: React.FC<{ block: CtaBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  return (
-    <div className="py-16 px-8 text-center" style={{ backgroundColor: block.data.bgColor }}>
-      <div className="max-w-4xl mx-auto text-white">
-         {isPreview ? <h2 className="text-3xl md:text-5xl font-bold mb-8 leading-tight">{block.data.text}</h2> : <textarea value={block.data.text} onChange={e => onUpdate(block.id, {...block.data, text: e.target.value})} className="text-3xl font-bold w-full bg-transparent text-center text-white border-b border-white/20 outline-none resize-none h-32" />}
-         
-         <div className="flex flex-col items-center gap-4">
-           {isPreview ? (
-             <a href={block.data.buttonLink} className="inline-block bg-white text-gray-900 font-bold px-8 py-4 rounded-full shadow-xl hover:scale-105 transition-transform">{block.data.buttonLabel}</a>
-           ) : (
-             <div className="flex gap-2 bg-white/10 p-4 rounded-xl backdrop-blur-sm">
-               <input value={block.data.buttonLabel} onChange={e => onUpdate(block.id, {...block.data, buttonLabel: e.target.value})} className="bg-white text-black px-4 py-2 rounded-lg" placeholder="Button Label" />
-               <input value={block.data.buttonLink} onChange={e => onUpdate(block.id, {...block.data, buttonLink: e.target.value})} className="bg-white text-black px-4 py-2 rounded-lg" placeholder="Link URL" />
-               <input type="color" value={block.data.bgColor} onChange={e => onUpdate(block.id, {...block.data, bgColor: e.target.value})} className="h-10 w-10 cursor-pointer rounded" />
-             </div>
-           )}
-         </div>
-      </div>
-    </div>
-  )
+   return (
+     <div className="py-12 px-8 text-center rounded-2xl my-8 mx-4" style={{ backgroundColor: block.data.bgColor }}>
+        {isPreview ? <h2 className="text-3xl font-bold text-white mb-6">{block.data.text}</h2> : <input value={block.data.text} onChange={e=>onUpdate(block.id, {...block.data, text: e.target.value})} className="text-3xl font-bold text-white text-center w-full bg-transparent mb-6" />}
+        <a href={block.data.buttonLink} className="inline-block bg-white text-gray-900 font-bold px-8 py-3 rounded-full hover:scale-105 transition-transform shadow-lg">
+           {isPreview ? block.data.buttonLabel : <input value={block.data.buttonLabel} onChange={e=>onUpdate(block.id, {...block.data, buttonLabel: e.target.value})} className="text-center w-32" />}
+        </a>
+        {!isPreview && (
+          <div className="mt-4 flex gap-2 justify-center">
+             <input value={block.data.buttonLink} onChange={e=>onUpdate(block.id, {...block.data, buttonLink: e.target.value})} placeholder="Link URL" className="text-xs p-1 rounded" />
+             <input type="color" value={block.data.bgColor} onChange={e=>onUpdate(block.id, {...block.data, bgColor: e.target.value})} />
+          </div>
+        )}
+     </div>
+   )
 }
 
 export const CountdownRenderer: React.FC<{ block: CountdownBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  const [timeLeft, setTimeLeft] = useState<{days: number, hours: number, minutes: number, seconds: number} | null>(null);
-
-  useEffect(() => {
-    const target = new Date(block.data.targetDate).getTime();
-    const timer = setInterval(() => {
-      const now = new Date().getTime();
-      const dist = target - now;
-      if (dist < 0) {
-        setTimeLeft(null);
-      } else {
-        setTimeLeft({
-          days: Math.floor(dist / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-          minutes: Math.floor((dist % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((dist % (1000 * 60)) / 1000)
-        });
-      }
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [block.data.targetDate]);
-
-  const TimeBox = ({ val, label }: { val: number, label: string }) => (
-    <div className="flex flex-col items-center mx-2 md:mx-4">
-      <div className="bg-white text-primary font-black text-3xl md:text-5xl w-20 h-20 md:w-32 md:h-32 flex items-center justify-center rounded-2xl shadow-lg border-b-4 border-blue-100">
-        {val < 10 ? `0${val}` : val}
-      </div>
-      <div className="mt-3 font-bold uppercase tracking-widest text-xs md:text-sm text-gray-500">{label}</div>
-    </div>
-  );
-
-  return (
-    <div className="py-16 px-4 bg-gray-50 text-center">
-      {isPreview ? <h2 className="text-2xl font-bold mb-10 text-gray-700 uppercase tracking-wide">{block.data.title}</h2> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="text-2xl font-bold text-center bg-transparent border-b w-full outline-none mb-10" />}
-      
-      <div className="flex justify-center flex-wrap gap-y-6">
-        {timeLeft ? (
-          <>
-            <TimeBox val={timeLeft.days} label="Hari" />
-            <TimeBox val={timeLeft.hours} label="Jam" />
-            <TimeBox val={timeLeft.minutes} label="Minit" />
-            <TimeBox val={timeLeft.seconds} label="Saat" />
-          </>
-        ) : (
-          <div className="text-xl font-bold text-gray-400">Acara Telah Tamat / Tarikh Tidak Sah</div>
-        )}
-      </div>
-      
-      {!isPreview && (
-        <div className="mt-8">
-           <label className="text-xs font-bold text-gray-500">Target Date: </label>
-           <input type="date" value={block.data.targetDate} onChange={e => onUpdate(block.id, {...block.data, targetDate: e.target.value})} className="border p-2 rounded ml-2" />
+   // Simple countdown logic
+   return (
+     <div className="py-8 px-4 text-center bg-gray-900 text-white rounded-xl">
+        {isPreview ? <h3 className="uppercase tracking-widest text-xs font-bold mb-4 text-primary">{block.data.title}</h3> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="text-center bg-transparent text-primary w-full text-xs font-bold uppercase" />}
+        <div className="flex justify-center gap-4 md:gap-8 font-mono">
+           {['HARI', 'JAM', 'MINIT', 'SAAT'].map(label => (
+             <div key={label} className="flex flex-col">
+               <span className="text-3xl md:text-5xl font-bold">00</span>
+               <span className="text-[10px] text-gray-500">{label}</span>
+             </div>
+           ))}
         </div>
-      )}
-    </div>
-  )
+        {!isPreview && <input type="date" value={block.data.targetDate} onChange={e=>onUpdate(block.id, {...block.data, targetDate: e.target.value})} className="mt-4 text-black p-1 rounded" />}
+     </div>
+   )
 }
 
 export const NoticeRenderer: React.FC<{ block: NoticeBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  const colors: any = {
-    yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-    blue: 'bg-blue-50 border-blue-200 text-blue-800',
-    red: 'bg-red-50 border-red-200 text-red-800',
-    green: 'bg-green-50 border-green-200 text-green-800'
-  };
-
-  return (
-    <div className={`p-6 my-4 rounded-xl border-l-4 ${colors[block.data.color]} shadow-sm max-w-4xl mx-auto flex items-start gap-4 relative group`}>
-       <div className="pt-1"><Icons.Megaphone size={24} /></div>
-       <div className="flex-1">
-          {isPreview ? (
-            <>
-               <h3 className="font-bold text-lg mb-1">{block.data.title}</h3>
-               <p className={`${getSizeClass(block.data.fontSize, 'body')} opacity-90`}>{block.data.content}</p>
-            </>
-          ) : (
-            <div className="flex flex-col gap-2">
-               <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="font-bold bg-transparent border-b border-black/10 outline-none" />
-               <textarea value={block.data.content} onChange={e => onUpdate(block.id, {...block.data, content: e.target.value})} className="bg-transparent border border-black/10 rounded p-1 text-sm h-24" />
-            </div>
-          )}
-       </div>
-       {!isPreview && (
-         <div className="flex flex-col gap-2 opacity-50 group-hover:opacity-100">
-            <select value={block.data.color} onChange={e => onUpdate(block.id, {...block.data, color: e.target.value})} className="text-xs border rounded p-1">
-              <option value="yellow">Yellow</option>
-              <option value="blue">Blue</option>
-              <option value="red">Red</option>
-              <option value="green">Green</option>
-            </select>
-            <FontSizeControl value={block.data.fontSize} onChange={(v) => onUpdate(block.id, { ...block.data, fontSize: v })} />
-         </div>
-       )}
-    </div>
-  )
+   const colors: any = { yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800', blue: 'bg-blue-50 border-blue-200 text-blue-800', red: 'bg-red-50 border-red-200 text-red-800', green: 'bg-green-50 border-green-200 text-green-800' };
+   return (
+     <div className={`p-6 rounded-xl border-l-4 ${colors[block.data.color]} relative group my-4`}>
+        {isPreview ? <h4 className="font-bold flex items-center gap-2 mb-2"><Icons.AlertTriangle size={18}/> {block.data.title}</h4> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="font-bold w-full bg-transparent mb-2" />}
+        {isPreview ? <p className="text-sm opacity-90">{block.data.content}</p> : <textarea value={block.data.content} onChange={e=>onUpdate(block.id, {...block.data, content: e.target.value})} className="w-full bg-transparent text-sm h-16 resize-none" />}
+        {!isPreview && (
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100">
+             <select value={block.data.color} onChange={e=>onUpdate(block.id, {...block.data, color: e.target.value})} className="text-xs border rounded">
+                <option value="yellow">Kuning</option>
+                <option value="blue">Biru</option>
+                <option value="red">Merah</option>
+                <option value="green">Hijau</option>
+             </select>
+          </div>
+        )}
+     </div>
+   )
 }
 
 export const TableRenderer: React.FC<{ block: TableBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  return (
-    <div className="py-12 px-4 max-w-5xl mx-auto">
-      {isPreview ? <h2 className="text-2xl font-bold mb-6">{block.data.title}</h2> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="text-2xl font-bold mb-6 w-full border-b bg-transparent outline-none" />}
-      
-      <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
-        <table className="w-full text-left bg-white">
-           <thead className="bg-gray-50 text-gray-600 font-bold uppercase text-xs tracking-wider">
-             <tr>
-               {[0,1,2].map(i => (
-                 <th key={i} className="p-4 border-b">
-                   {isPreview ? block.data.headers[i] : <input value={block.data.headers[i]} onChange={e => { const nh = [...block.data.headers]; nh[i] = e.target.value; onUpdate(block.id, {...block.data, headers: nh}) }} className="bg-transparent w-full uppercase outline-none" />}
-                 </th>
-               ))}
-               {!isPreview && <th className="w-10"></th>}
-             </tr>
-           </thead>
-           <tbody className="divide-y divide-gray-100">
-             {block.data.rows.map((row, idx) => (
-               <tr key={idx} className="hover:bg-gray-50">
-                 {['col1','col2','col3'].map((col) => (
-                   <td key={col} className="p-4 text-sm">
-                     {isPreview ? (row as any)[col] : <input value={(row as any)[col]} onChange={e => { const nr = [...block.data.rows]; (nr[idx] as any)[col] = e.target.value; onUpdate(block.id, {...block.data, rows: nr}) }} className="w-full bg-transparent border-b border-transparent hover:border-gray-200 outline-none" />}
-                   </td>
+   return (
+     <div className="py-8 px-4 overflow-x-auto">
+        {isPreview ? <h3 className="font-bold text-xl mb-4">{block.data.title}</h3> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="font-bold text-xl mb-4 w-full bg-transparent" />}
+        <table className="w-full text-sm border-collapse">
+           <thead>
+              <tr className="bg-gray-100 text-left">
+                 {block.data.headers.map((h, i) => (
+                   <th key={i} className="p-3 border-b-2 border-gray-200">
+                     {isPreview ? h : <input value={h} onChange={e=>{const nh=[...block.data.headers] as [string,string,string]; nh[i]=e.target.value; onUpdate(block.id, {...block.data, headers: nh})}} className="bg-transparent w-full font-bold" />}
+                   </th>
                  ))}
-                 {!isPreview && (
-                   <td className="p-2 text-center">
-                     <button onClick={() => { const nr = block.data.rows.filter((_, i) => i !== idx); onUpdate(block.id, {...block.data, rows: nr}) }} className="text-red-400 hover:text-red-600"><Icons.Trash2 size={14} /></button>
-                   </td>
-                 )}
-               </tr>
-             ))}
+                 {!isPreview && <th className="w-10"></th>}
+              </tr>
+           </thead>
+           <tbody>
+              {block.data.rows.map((row, i) => (
+                <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+                   <td className="p-3">{isPreview ? row.col1 : <input value={row.col1} onChange={e=>{const nr=[...block.data.rows]; nr[i].col1=e.target.value; onUpdate(block.id, {...block.data, rows: nr})}} className="w-full bg-transparent"/>}</td>
+                   <td className="p-3">{isPreview ? row.col2 : <input value={row.col2} onChange={e=>{const nr=[...block.data.rows]; nr[i].col2=e.target.value; onUpdate(block.id, {...block.data, rows: nr})}} className="w-full bg-transparent"/>}</td>
+                   <td className="p-3">{isPreview ? row.col3 : <input value={row.col3} onChange={e=>{const nr=[...block.data.rows]; nr[i].col3=e.target.value; onUpdate(block.id, {...block.data, rows: nr})}} className="w-full bg-transparent"/>}</td>
+                   {!isPreview && <td><button onClick={()=>{const nr=[...block.data.rows]; nr.splice(i,1); onUpdate(block.id, {...block.data, rows: nr})}} className="text-red-500"><Icons.Trash2 size={14}/></button></td>}
+                </tr>
+              ))}
            </tbody>
         </table>
-      </div>
-      {!isPreview && <button onClick={() => onUpdate(block.id, {...block.data, rows: [...block.data.rows, { col1: '-', col2: '-', col3: '-' }]})} className="mt-2 text-sm text-primary font-bold">+ Add Row</button>}
-    </div>
-  )
+        {!isPreview && <button onClick={()=>onUpdate(block.id, {...block.data, rows: [...block.data.rows, {col1: '-', col2: '-', col3: '-'}]})} className="mt-2 text-xs text-blue-500 hover:underline">+ Tambah Baris</button>}
+     </div>
+   )
 }
 
 export const StaffGridRenderer: React.FC<{ block: StaffGridBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  return (
-    <div className="py-12 px-4 max-w-6xl mx-auto">
-      {isPreview ? <h2 className="text-3xl font-bold text-center mb-12 uppercase tracking-wide border-b pb-4">{block.data.title}</h2> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="text-3xl font-bold text-center w-full mb-12 border-b bg-transparent outline-none" />}
-      
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-         {block.data.members.map((member, idx) => (
-           <div key={idx} className="flex flex-col items-center group relative">
-             <div className="w-full aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 mb-3 shadow-md">
-               <img src={member.imageUrl} alt={member.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-               {!isPreview && <div className="absolute top-2 right-2"><ImageControl label="" url={member.imageUrl} onChange={v => { const nm = [...block.data.members]; nm[idx].imageUrl = v; onUpdate(block.id, {...block.data, members: nm}) }} /></div>}
+   // Reusing logic from Gallery/Org but simple grid
+   return (
+     <div className="py-8 px-4">
+        {isPreview ? <h2 className="text-2xl font-bold text-center mb-8">{block.data.title}</h2> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="w-full text-center text-2xl font-bold mb-8 bg-transparent" />}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+           {block.data.members.map((m, i) => (
+             <div key={m.id} className="flex flex-col items-center text-center group relative">
+                <div className="w-24 h-24 rounded-full overflow-hidden mb-3 border-2 border-gray-100 shadow-sm">
+                   <img src={m.imageUrl} alt={m.name} className="w-full h-full object-cover" />
+                </div>
+                {isPreview ? <div className="font-bold text-sm leading-tight">{m.name}</div> : <input value={m.name} onChange={e=>{const nm=[...block.data.members]; nm[i].name=e.target.value; onUpdate(block.id, {...block.data, members: nm})}} className="text-center font-bold text-sm w-full bg-transparent" />}
+                {isPreview ? <div className="text-xs text-gray-500">{m.position}</div> : <input value={m.position} onChange={e=>{const nm=[...block.data.members]; nm[i].position=e.target.value; onUpdate(block.id, {...block.data, members: nm})}} className="text-center text-xs w-full bg-transparent text-gray-400" />}
+                {!isPreview && (
+                   <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 flex flex-col items-end">
+                      <button onClick={()=>{const nm=[...block.data.members]; nm.splice(i,1); onUpdate(block.id, {...block.data, members: nm})}} className="text-red-500"><Icons.Trash2 size={12}/></button>
+                      <input value={m.imageUrl} onChange={e=>{const nm=[...block.data.members]; nm[i].imageUrl=e.target.value; onUpdate(block.id, {...block.data, members: nm})}} className="w-24 text-[10px] border" placeholder="Img URL" />
+                   </div>
+                )}
              </div>
-             {isPreview ? (
-               <div className="text-center">
-                 <h3 className="font-bold text-gray-900 text-sm">{member.name}</h3>
-                 <p className="text-xs text-primary font-medium uppercase mt-0.5">{member.position}</p>
-               </div>
-             ) : (
-               <div className="w-full space-y-1">
-                 <input value={member.name} onChange={e => { const nm = [...block.data.members]; nm[idx].name = e.target.value; onUpdate(block.id, {...block.data, members: nm}) }} className="text-center font-bold text-sm w-full border-b" placeholder="Name" />
-                 <input value={member.position} onChange={e => { const nm = [...block.data.members]; nm[idx].position = e.target.value; onUpdate(block.id, {...block.data, members: nm}) }} className="text-center text-xs text-primary w-full border-b" placeholder="Role" />
-                 <button onClick={() => { const nm = block.data.members.filter((_, i) => i !== idx); onUpdate(block.id, {...block.data, members: nm}) }} className="w-full text-center text-[10px] text-red-400">Remove</button>
-               </div>
-             )}
-           </div>
-         ))}
-         {!isPreview && (
-           <button onClick={() => onUpdate(block.id, {...block.data, members: [...block.data.members, { id: uuidv4(), name: 'Nama', position: 'Jawatan', imageUrl: 'https://picsum.photos/200/300' }]})} className="aspect-[3/4] rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center hover:bg-gray-50 text-gray-400 hover:text-primary transition-all">
-             <Icons.Plus size={32} />
-           </button>
-         )}
-      </div>
-    </div>
-  )
+           ))}
+           {!isPreview && <button onClick={()=>onUpdate(block.id, {...block.data, members: [...block.data.members, {id: uuidv4(), name: 'Nama', position: 'Jawatan', imageUrl: 'https://picsum.photos/100'}]})} className="aspect-square rounded-full border-2 border-dashed flex items-center justify-center text-gray-300 hover:border-primary hover:text-primary"><Icons.Plus/></button>}
+        </div>
+     </div>
+   )
 }
 
 export const TestimonialRenderer: React.FC<{ block: TestimonialBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  return (
-    <div className="py-20 px-8 bg-blue-50 text-center relative overflow-hidden">
-      <div className="absolute top-10 left-10 text-9xl text-blue-100 font-serif opacity-50 z-0">"</div>
-      <div className="relative z-10 max-w-4xl mx-auto">
-         {isPreview ? (
-           <blockquote className="text-2xl md:text-4xl font-serif text-blue-900 leading-relaxed italic mb-8">
-             "{block.data.quote}"
-           </blockquote>
-         ) : (
-           <textarea value={block.data.quote} onChange={e => onUpdate(block.id, {...block.data, quote: e.target.value})} className="w-full h-32 bg-transparent text-2xl text-center italic border-b border-blue-200 outline-none resize-none mb-8" placeholder="Quote Text..." />
-         )}
-         
-         <div className="flex flex-col items-center">
-            {isPreview ? <div className="font-bold text-gray-900">{block.data.author}</div> : <input value={block.data.author} onChange={e => onUpdate(block.id, {...block.data, author: e.target.value})} className="font-bold text-center bg-transparent border-b w-64" placeholder="Author Name" />}
-            {isPreview ? <div className="text-sm text-gray-500 uppercase tracking-wide mt-1">{block.data.role}</div> : <input value={block.data.role} onChange={e => onUpdate(block.id, {...block.data, role: e.target.value})} className="text-sm text-center bg-transparent border-b w-64 mt-1" placeholder="Role / Batch" />}
-         </div>
-      </div>
-    </div>
-  )
+   return (
+     <div className="py-12 px-8 bg-blue-50 text-center relative rounded-2xl my-8">
+        <Icons.Quote className="absolute top-4 left-4 text-blue-200 w-16 h-16" />
+        <div className="relative z-10 max-w-2xl mx-auto">
+           {isPreview ? <p className="text-xl font-medium italic text-gray-800 mb-6 leading-relaxed">"{block.data.quote}"</p> : <textarea value={block.data.quote} onChange={e=>onUpdate(block.id, {...block.data, quote: e.target.value})} className="w-full h-32 text-center text-xl italic bg-transparent border-none resize-none" />}
+           <div className="flex flex-col items-center">
+              <div className="w-12 h-1 bg-primary mb-2 rounded-full"></div>
+              {isPreview ? <span className="font-bold text-gray-900">{block.data.author}</span> : <input value={block.data.author} onChange={e=>onUpdate(block.id, {...block.data, author: e.target.value})} className="text-center font-bold bg-transparent" placeholder="Nama" />}
+              {isPreview ? <span className="text-sm text-gray-500">{block.data.role}</span> : <input value={block.data.role} onChange={e=>onUpdate(block.id, {...block.data, role: e.target.value})} className="text-center text-sm text-gray-500 bg-transparent" placeholder="Jawatan/Alumni" />}
+           </div>
+        </div>
+     </div>
+   )
 }
 
 export const LinkListRenderer: React.FC<{ block: LinkListBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
   return (
-    <div className="py-8 px-4 max-w-sm mx-auto w-full">
-      {isPreview ? <h3 className="font-bold text-lg mb-4 text-gray-800 border-b pb-2">{block.data.title}</h3> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="font-bold text-lg mb-4 w-full border-b pb-2 bg-transparent outline-none" />}
-      
-      <ul className="space-y-2">
-        {block.data.links.map((link, idx) => (
-          <li key={idx} className="flex items-center gap-2 group">
-             <Icons.Link className="text-primary w-4 h-4" />
-             <div className="flex-1">
-               {isPreview ? <a href={link.url} className="text-blue-600 hover:underline block truncate">{link.label}</a> : (
-                 <div className="flex gap-2">
-                    <input value={link.label} onChange={e => { const nl = [...block.data.links]; nl[idx].label = e.target.value; onUpdate(block.id, {...block.data, links: nl}) }} className="flex-1 border-b text-sm" placeholder="Label" />
-                    <input value={link.url} onChange={e => { const nl = [...block.data.links]; nl[idx].url = e.target.value; onUpdate(block.id, {...block.data, links: nl}) }} className="flex-1 border-b text-xs text-gray-500" placeholder="URL" />
-                 </div>
-               )}
-             </div>
-             {!isPreview && <button onClick={() => { const nl = block.data.links.filter((_, i) => i !== idx); onUpdate(block.id, {...block.data, links: nl}) }} className="text-red-400 opacity-0 group-hover:opacity-100"><Icons.X size={14} /></button>}
-          </li>
-        ))}
-      </ul>
-      {!isPreview && <button onClick={() => onUpdate(block.id, {...block.data, links: [...block.data.links, { label: 'New Link', url: '#' }]})} className="mt-3 text-xs text-primary font-bold bg-blue-50 px-3 py-1 rounded">+ Add Link</button>}
+    <div className="py-6 px-4">
+       {isPreview ? <h3 className="font-bold mb-3 uppercase text-xs text-gray-500 tracking-wider">{block.data.title}</h3> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="font-bold mb-3 w-full bg-transparent text-xs uppercase" />}
+       <ul className="space-y-2">
+          {block.data.links.map((link, i) => (
+             <li key={i} className="flex items-center gap-2 group relative">
+                <Icons.Link size={14} className="text-primary shrink-0" />
+                {isPreview ? <a href={link.url} className="text-sm hover:underline hover:text-primary truncate">{link.label}</a> : (
+                  <div className="flex-1 flex gap-2">
+                     <input value={link.label} onChange={e=>{const nl=[...block.data.links]; nl[i].label=e.target.value; onUpdate(block.id, {...block.data, links: nl})}} className="flex-1 text-sm bg-transparent border-b border-dashed" />
+                     <input value={link.url} onChange={e=>{const nl=[...block.data.links]; nl[i].url=e.target.value; onUpdate(block.id, {...block.data, links: nl})}} className="flex-1 text-xs text-blue-500 bg-transparent border-b border-dashed" placeholder="https://" />
+                  </div>
+                )}
+                {!isPreview && <button onClick={()=>{const nl=[...block.data.links]; nl.splice(i,1); onUpdate(block.id, {...block.data, links: nl})}} className="text-red-400 opacity-0 group-hover:opacity-100"><Icons.X size={12}/></button>}
+             </li>
+          ))}
+          {!isPreview && <button onClick={()=>onUpdate(block.id, {...block.data, links: [...block.data.links, {label: "Pautan Baru", url: "#"}]})} className="text-xs text-gray-400 hover:text-primary mt-2 flex items-center gap-1"><Icons.Plus size={12}/> Tambah Link</button>}
+       </ul>
     </div>
   )
 }
 
 export const NewsRenderer: React.FC<{ block: NewsBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  return (
-    <div className="py-12 px-4 max-w-6xl mx-auto">
-      {isPreview ? <h2 className="text-2xl font-bold mb-8 flex items-center gap-2"><Icons.Newspaper className="text-primary" /> {block.data.title}</h2> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="text-2xl font-bold mb-8 w-full border-b bg-transparent outline-none" />}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {block.data.items.map((item, idx) => (
-          <div key={item.id} className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow relative group flex flex-col h-full">
-             <div className="flex justify-between items-start mb-4">
-                {isPreview ? <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">{item.tag}</span> : <select value={item.tag} onChange={e => { const ni = [...block.data.items]; ni[idx].tag = e.target.value as any; onUpdate(block.id, {...block.data, items: ni}) }} className="text-xs border rounded w-32"><option>PENTADBIRAN</option><option>KURIKULUM</option><option>HAL EHWAL MURID</option><option>KOKURIKULUM</option><option>PPKI</option><option>KELAB KEBAJIKAN GURU DAN STAF</option></select>}
-                {isPreview ? <span className="text-xs text-gray-400 font-mono">{formatDate(item.date)}</span> : <input type="date" value={item.date} onChange={e => { const ni = [...block.data.items]; ni[idx].date = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="text-xs border rounded" />}
-             </div>
-             
-             <div className="flex-1">
-               {isPreview ? (
-                  item.link ? (
-                    <a href={item.link} target="_blank" rel="noopener noreferrer" className="block font-bold text-lg mb-2 text-gray-800 hover:text-primary leading-snug hover:underline decoration-primary decoration-2 underline-offset-2 transition-all cursor-pointer">
-                      {item.title}
-                      <Icons.ExternalLink className="inline ml-1 w-3 h-3 text-gray-400" />
-                    </a>
-                  ) : (
-                    <h3 className="font-bold text-lg mb-2 text-gray-800 leading-snug">{item.title}</h3>
-                  )
-               ) : (
-                 <div className="flex flex-col gap-2 mb-2">
-                   <textarea value={item.title} onChange={e => { const ni = [...block.data.items]; ni[idx].title = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="w-full font-bold text-lg border-b" rows={2} placeholder="Tajuk Berita" />
-                   <input value={item.link || ''} onChange={e => { const ni = [...block.data.items]; ni[idx].link = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="text-xs border rounded p-1 w-full bg-gray-50 text-gray-600" placeholder="URL Pautan (Optional)" />
+   return (
+     <div className="py-12 px-4 bg-white">
+        <div className="max-w-6xl mx-auto">
+           <div className="flex justify-between items-end mb-8 border-b-2 border-gray-100 pb-2">
+              {isPreview ? <h2 className="text-2xl font-bold text-gray-800 border-b-4 border-primary -mb-3 pb-2 inline-block">{block.data.title}</h2> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="text-2xl font-bold bg-transparent" />}
+              {isPreview && <button className="text-sm font-bold text-primary flex items-center gap-1 hover:underline">Lihat Semua <Icons.ExternalLink size={14}/></button>}
+           </div>
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {block.data.items.map((news, i) => (
+                 <div key={news.id} className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm hover:shadow-lg transition-all relative group">
+                    <div className="flex justify-between items-start mb-4">
+                       <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide">{news.tag}</span>
+                       <span className="text-xs text-gray-400 font-mono">{news.date}</span>
+                    </div>
+                    {isPreview ? <h3 className="font-bold text-lg mb-2 leading-tight hover:text-primary cursor-pointer">{news.title}</h3> : <input value={news.title} onChange={e=>{const ni=[...block.data.items]; ni[i].title=e.target.value; onUpdate(block.id, {...block.data, items: ni})}} className="w-full font-bold text-lg mb-2 border-b border-dashed" />}
+                    {isPreview ? <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">{news.content}</p> : <textarea value={news.content} onChange={e=>{const ni=[...block.data.items]; ni[i].content=e.target.value; onUpdate(block.id, {...block.data, items: ni})}} className="w-full text-sm h-20 resize-none border-none bg-transparent" />}
+                    {!isPreview && (
+                       <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 bg-white p-1 shadow rounded border">
+                          <input type="date" value={news.date} onChange={e=>{const ni=[...block.data.items]; ni[i].date=e.target.value; onUpdate(block.id, {...block.data, items: ni})}} className="text-[10px] border p-1" />
+                          <select value={news.tag} onChange={e=>{const ni=[...block.data.items]; ni[i].tag=e.target.value as any; onUpdate(block.id, {...block.data, items: ni})}} className="text-[10px] border p-1 w-full">
+                             <option>PENTADBIRAN</option>
+                             <option>KURIKULUM</option>
+                             <option>HAL EHWAL MURID</option>
+                             <option>KOKURIKULUM</option>
+                          </select>
+                          <button onClick={()=>{const ni=[...block.data.items]; ni.splice(i,1); onUpdate(block.id, {...block.data, items: ni})}} className="bg-red-500 text-white text-xs p-1 rounded">Padam</button>
+                       </div>
+                    )}
                  </div>
-               )}
-               
-               {isPreview ? <p className="text-sm text-gray-600 line-clamp-3">{item.content}</p> : <textarea value={item.content} onChange={e => { const ni = [...block.data.items]; ni[idx].content = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="w-full text-sm border rounded p-1 h-20" placeholder="Ringkasan berita..." />}
-             </div>
-             
-             {!isPreview && <button onClick={() => { const ni = block.data.items.filter((_, i) => i !== idx); onUpdate(block.id, {...block.data, items: ni}) }} className="absolute top-2 right-2 text-red-300 hover:text-red-500"><Icons.Trash2 size={16} /></button>}
-          </div>
-        ))}
-        {!isPreview && (
-          <button onClick={() => onUpdate(block.id, {...block.data, items: [...block.data.items, { id: uuidv4(), title: 'Berita Baru', date: new Date().toISOString().split('T')[0], tag: 'HAL EHWAL MURID', content: 'Kandungan berita...', link: '' }]})} className="flex items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-8 text-gray-400 hover:bg-gray-50 hover:text-primary transition-all min-h-[250px]">
-            <Icons.Plus size={32} />
-          </button>
-        )}
-      </div>
-    </div>
-  )
+              ))}
+              {!isPreview && <button onClick={()=>onUpdate(block.id, {...block.data, items: [...block.data.items, {id: uuidv4(), title: 'Berita Baru', date: new Date().toISOString().split('T')[0], tag: 'PENTADBIRAN', content: 'Isi kandungan berita...'}]})} className="border-2 border-dashed rounded-xl flex flex-col items-center justify-center p-8 text-gray-400 hover:text-primary hover:border-primary"><Icons.Plus size={32}/><span className="text-sm font-bold mt-2">Tambah Berita</span></button>}
+           </div>
+        </div>
+     </div>
+   )
 }
 
 export const DefinitionRenderer: React.FC<{ block: DefinitionBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  return (
-    <div className="py-16 px-4 bg-white">
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-16">
-        <div className="flex-1 w-full">
-           {isPreview ? <h2 className="text-3xl font-bold mb-8 text-primary uppercase tracking-wide border-l-4 border-secondary pl-4">{block.data.title}</h2> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="text-3xl font-bold mb-8 w-full border-b bg-transparent outline-none" />}
-           
-           <div className="space-y-6">
-             {block.data.items.map((item, idx) => (
-               <div key={idx} className="flex gap-4 group">
-                 <div className="w-12 h-1 bg-secondary mt-3 shrink-0"></div>
-                 <div className="flex-1">
-                   {isPreview ? <h3 className="font-bold text-lg text-gray-900">{item.term}</h3> : <input value={item.term} onChange={e => { const ni = [...block.data.items]; ni[idx].term = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="font-bold text-lg w-full border-b" placeholder="Term" />}
-                   {isPreview ? <p className="text-gray-600 leading-relaxed">{item.definition}</p> : <textarea value={item.definition} onChange={e => { const ni = [...block.data.items]; ni[idx].definition = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="w-full border rounded p-1 text-sm mt-1" placeholder="Definisi" />}
-                 </div>
-                 {!isPreview && <button onClick={() => { const ni = block.data.items.filter((_, i) => i !== idx); onUpdate(block.id, {...block.data, items: ni}) }} className="text-red-400 opacity-0 group-hover:opacity-100"><Icons.Trash2 size={14} /></button>}
-               </div>
-             ))}
-             {!isPreview && <button onClick={() => onUpdate(block.id, {...block.data, items: [...block.data.items, { term: 'Istilah', definition: 'Maksud...' }]})} className="text-sm text-primary font-bold">+ Add Item</button>}
+   return (
+     <div className="py-12 px-6 bg-white">
+        <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-10 items-start">
+           <div className="w-full md:w-1/3 flex flex-col items-center">
+              <img src={block.data.imageUrl} alt="Logo" className="w-48 h-auto object-contain mb-4" />
+              {!isPreview && <input value={block.data.imageUrl} onChange={e=>onUpdate(block.id, {...block.data, imageUrl: e.target.value})} className="text-xs border p-1 w-full rounded" placeholder="Image URL" />}
+           </div>
+           <div className="flex-1 w-full">
+              {isPreview ? <h2 className="text-2xl font-bold mb-6 text-gray-900 border-b pb-2">{block.data.title}</h2> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="text-2xl font-bold mb-6 w-full border-b" />}
+              <div className="space-y-6">
+                 {block.data.items.map((item, i) => (
+                    <div key={i} className="group relative">
+                       {isPreview ? <h4 className="font-bold text-primary text-lg mb-1">{item.term}</h4> : <input value={item.term} onChange={e=>{const ni=[...block.data.items]; ni[i].term=e.target.value; onUpdate(block.id, {...block.data, items: ni})}} className="font-bold text-primary text-lg w-full bg-transparent" />}
+                       {isPreview ? <p className="text-gray-600 leading-relaxed text-sm text-justify">{item.definition}</p> : <textarea value={item.definition} onChange={e=>{const ni=[...block.data.items]; ni[i].definition=e.target.value; onUpdate(block.id, {...block.data, items: ni})}} className="w-full h-20 text-sm bg-transparent border-l-2 border-gray-200 pl-2 resize-none" />}
+                       {!isPreview && <button onClick={()=>{const ni=[...block.data.items]; ni.splice(i,1); onUpdate(block.id, {...block.data, items: ni})}} className="absolute top-0 right-0 text-red-400 opacity-0 group-hover:opacity-100"><Icons.X size={14}/></button>}
+                    </div>
+                 ))}
+                 {!isPreview && <button onClick={()=>onUpdate(block.id, {...block.data, items: [...block.data.items, {term: 'Istilah', definition: 'Definisi...'}]})} className="text-sm text-blue-500 hover:underline">+ Tambah Definisi</button>}
+              </div>
            </div>
         </div>
-        <div className="w-full md:w-1/3 flex justify-center relative group">
-           <img src={block.data.imageUrl} alt="Definition Visual" className="w-64 h-auto object-contain drop-shadow-2xl" />
-           {!isPreview && <div className="absolute inset-0 bg-white/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><ImageControl label="Visual" url={block.data.imageUrl} onChange={v => onUpdate(block.id, {...block.data, imageUrl: v})} /></div>}
-        </div>
-      </div>
-    </div>
-  )
+     </div>
+   )
 }
 
 export const BlockRenderer: React.FC<RendererProps> = (props) => {
   const { block, ...rest } = props;
   switch (block.type) {
     case 'hero': return <HeroRenderer block={block as HeroBlock} {...rest} />;
+    case 'title': return <TitleRenderer block={block as TitleBlock} {...rest} />;
+    case 'navbar': return <NavbarRenderer block={block as NavbarBlock} {...rest} />;
+    case 'history': return <HistoryRenderer block={block as HistoryBlock} {...rest} />;
     case 'content': return <ContentRenderer block={block as ContentBlock} {...rest} />;
     case 'feature': return <FeatureRenderer block={block as unknown as FeatureBlock} {...rest} />;
     case 'gallery': return <GalleryRenderer block={block as unknown as GalleryBlock} {...rest} />;
