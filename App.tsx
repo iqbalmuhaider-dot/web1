@@ -157,6 +157,16 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
+  // Theme Application
+  useEffect(() => {
+    if (data.primaryColor) {
+      document.documentElement.style.setProperty('--color-primary', data.primaryColor);
+    }
+    if (data.secondaryColor) {
+      document.documentElement.style.setProperty('--color-secondary', data.secondaryColor);
+    }
+  }, [data.primaryColor, data.secondaryColor]);
+
   useEffect(() => {
     const initData = async () => {
       setIsLoading(true);
@@ -164,7 +174,12 @@ export default function App() {
       // Load data immediately regardless of auth
       const savedData = await loadWebsiteData();
       if (savedData) {
-        setData(savedData);
+        setData(prev => ({
+          ...savedData,
+          // Ensure theme colors are loaded, fallback to prev/defaults if missing
+          primaryColor: savedData.primaryColor || prev.primaryColor,
+          secondaryColor: savedData.secondaryColor || prev.secondaryColor,
+        }));
         if (!findPageRecursive(savedData.pages, activePageId)) {
           setActivePageId(savedData.pages[0]?.id || 'utama');
         }
@@ -172,8 +187,8 @@ export default function App() {
 
       // Subscribe to Auth State
       const unsubscribe = subscribeToAuth((currentUser) => {
-        setUser(currentUser);
-        if (!currentUser) {
+        if (!user) setUser(currentUser); // Only set if not already locally set (for password bypass)
+        if (!currentUser && !user) {
           setIsPreview(true); // Force preview if logged out
         }
         setIsLoading(false);
@@ -197,18 +212,37 @@ export default function App() {
 
   const handleAdminLogin = async () => {
     if (user) {
-      // If logged in, maybe ask to logout or go to dashboard?
+      // If logged in, logout
+      const confirmLogout = window.confirm("Adakah anda ingin log keluar?");
+      if (confirmLogout) {
+        await logoutUser();
+        setUser(null);
+        setIsPreview(true);
+      }
     } else {
-      await loginWithGoogle();
+      // Ask for password first
+      const password = window.prompt("Masukkan Kata Laluan Admin (Atau biarkan kosong untuk Log Masuk Google):");
+      
+      if (password === "admin123") {
+        // Bypass login
+        setUser({ uid: 'admin-local', email: 'admin@skmt.edu.my', displayName: 'Admin SKMT' } as User);
+        setIsPreview(false);
+        alert("Log masuk berjaya (Mod Admin).");
+      } else if (password === "" || password === null) {
+        // Fallback to Google Login
+        await loginWithGoogle();
+      } else {
+        alert("Kata laluan salah.");
+      }
     }
   };
 
   const addBlock = (type: BlockType) => {
     const id = uuidv4();
     const defaults: any = {
-       hero: { type: 'hero', data: { title: "Tajuk Baru", subtitle: "Subtajuk deskripsi", bgImage: "https://picsum.photos/1920/1080", buttonText: "Klik" } },
-       feature: { type: 'feature', data: { title: "Ciri-Ciri", features: [{ title: "Ciri 1", description: "Deskripsi", icon: "Star" }, { title: "Ciri 2", description: "Deskripsi", icon: "Heart" }, { title: "Ciri 3", description: "Deskripsi", icon: "Shield" }] } },
-       content: { type: 'content', data: { title: "Tajuk", body: "Kandungan teks...", alignment: "left" } },
+       hero: { type: 'hero', data: { title: "Tajuk Baru", subtitle: "Subtajuk deskripsi", bgImage: "https://picsum.photos/1920/1080", buttonText: "Klik", fontSize: 'md' } },
+       feature: { type: 'feature', data: { title: "Ciri-Ciri", features: [{ title: "Ciri 1", description: "Deskripsi", icon: "Star" }, { title: "Ciri 2", description: "Deskripsi", icon: "Heart" }, { title: "Ciri 3", description: "Deskripsi", icon: "Shield" }], fontSize: 'md' } },
+       content: { type: 'content', data: { title: "Tajuk", body: "Kandungan teks...", alignment: "left", fontSize: 'md' } },
        footer: { type: 'footer', data: { copyright: "© 2024 SK Masjid Tanah. Hak Cipta Terpelihara." } },
        gallery: { type: 'gallery', data: { title: "Galeri Foto", images: ["https://picsum.photos/400/300", "https://picsum.photos/400/301", "https://picsum.photos/400/302"] } },
        contact: { type: 'contact', data: { title: "Hubungi Kami", email: "info@skmt.edu.my", phone: "+606-1234567", address: "Jalan Sekolah, 78300 Masjid Tanah, Melaka", mapUrl: "" } },
@@ -218,24 +252,26 @@ export default function App() {
        image: { type: 'image', data: { url: "https://picsum.photos/800/400", caption: "", width: "medium", animation: "none" } },
        // Updated Existing Types
        ticker: { type: 'ticker', data: { label: "INFO TERKINI", text: "Pendaftaran murid tahun 1 kini dibuka.", direction: 'left', speed: 20 } },
-       orgChart: { type: 'orgChart', data: { title: "Carta Organisasi", members: [{ id: '1', name: "Guru Besar", position: "Guru Besar", imageUrl: "https://picsum.photos/200" }, { id: '2', name: "PK Pentadbiran", position: "Penolong Kanan 1", imageUrl: "https://picsum.photos/201" }] } },
+       orgChart: { type: 'orgChart', data: { title: "Carta Organisasi", members: [{ id: '1', name: "Guru Besar", position: "Guru Besar", imageUrl: "https://picsum.photos/200" }, { id: '2', name: "PK Pentadbiran", position: "Penolong Kanan 1", imageUrl: "https://picsum.photos/201" }], fontSize: 'md' } },
        stats: { type: 'stats', data: { title: "Dashboard Sekolah", items: [{ id: '1', label: "MURID", value: "850", icon: "Users" }, { id: '2', label: "GURU", value: "45", icon: "Briefcase" }, { id: '3', label: "STAF", value: "12", icon: "Settings" }] } },
        time: { type: 'time', data: { format: '12h', showDate: true, alignment: 'center', bgColor: '#1e40af', textColor: '#ffffff' } },
        visitor: { type: 'visitor', data: { label: "Jumlah Pelawat", count: 12405, showLiveIndicator: true } },
-       speech: { type: 'speech', data: { title: "Sekapur Sirih", text: "Assalamualaikum dan selamat sejahtera...", imageUrl: "https://picsum.photos/400/500", authorName: "Guru Besar", authorRole: "GB SKMT" } },
+       speech: { type: 'speech', data: { title: "Sekapur Sirih", text: "Assalamualaikum dan selamat sejahtera...", imageUrl: "https://picsum.photos/400/500", authorName: "Guru Besar", authorRole: "GB SKMT", fontSize: 'md' } },
        // 10 New Types
        calendar: { type: 'calendar', data: { title: "Takwim Sekolah", events: [{ date: "15", month: "MAC", title: "Mesyuarat PIBG", desc: "Dewan Sekolah, 8.00 Pagi" }, { date: "22", month: "APR", title: "Hari Sukan", desc: "Padang Sekolah" }] } },
        downloads: { type: 'downloads', data: { title: "Muat Turun", items: [{ title: "Borang Pendaftaran", url: "#", type: "PDF" }, { title: "Jadual Waktu", url: "#", type: "DOC" }] } },
        faq: { type: 'faq', data: { title: "Soalan Lazim", items: [{ question: "Bila sekolah dibuka?", answer: "Sekolah dibuka pada pukul 7.00 pagi setiap hari persekolahan." }] } },
        cta: { type: 'cta', data: { text: "Pendaftaran Murid Tahun 1 Sesi 2025 Kini Dibuka!", buttonLabel: "Daftar Sekarang", buttonLink: "#", bgColor: "#1e40af" } },
        countdown: { type: 'countdown', data: { title: "Menuju Hari Sukan Tahunan", targetDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0] } },
-       notice: { type: 'notice', data: { title: "Perhatian", content: "Sila bawa baju sukan pada hari Rabu.", color: "yellow" } },
+       notice: { type: 'notice', data: { title: "Perhatian", content: "Sila bawa baju sukan pada hari Rabu.", color: "yellow", fontSize: 'md' } },
        table: { type: 'table', data: { title: "Waktu Operasi Pejabat", headers: ["Hari", "Masa Buka", "Masa Tutup"], rows: [{ col1: "Isnin - Khamis", col2: "8.00 Pagi", col3: "5.00 Petang" }, { col1: "Jumaat", col2: "8.00 Pagi", col3: "12.15 Tengahari" }] } },
        staffGrid: { type: 'staffGrid', data: { title: "Barisan Pentadbir", members: [{ id: '1', name: "Cikgu Ali", position: "GB", imageUrl: "https://picsum.photos/150" }, { id: '2', name: "Cikgu Siti", position: "PK HEM", imageUrl: "https://picsum.photos/151" }] } },
        testimonial: { type: 'testimonial', data: { quote: "Sekolah ini telah membentuk sahsiah diri saya menjadi insan berguna.", author: "Azman Bin Ali", role: "Alumni 1998" } },
        linkList: { type: 'linkList', data: { title: "Pautan Luar", links: [{ label: "Portal KPM", url: "https://www.moe.gov.my" }, { label: "SAPS Ibu Bapa", url: "https://sapsnkra.moe.gov.my" }] } },
        news: { type: 'news', data: { title: "Info Terkini", items: [{ id: '1', title: "Gotong Royong Perdana", date: "2024-03-20", tag: 'HEM', content: "Semua ibu bapa dijemput hadir untuk menjayakan program ini." }] } },
-       definition: { type: 'definition', data: { title: "Maksud Logo Sekolah", imageUrl: "https://picsum.photos/300", items: [{ term: "Merah", definition: "Keberanian" }, { term: "Biru", definition: "Perpaduan" }] } }
+       definition: { type: 'definition', data: { title: "Maksud Logo Sekolah", imageUrl: "https://picsum.photos/300", items: [{ term: "Merah", definition: "Keberanian" }, { term: "Biru", definition: "Perpaduan" }] } },
+       divider: { type: 'divider', data: { style: 'solid', color: '#e5e7eb', thickness: 2 } },
+       spacer: { type: 'spacer', data: { height: 50 } },
     };
     
     if (!defaults[type]) return;
@@ -292,7 +328,7 @@ export default function App() {
       id: newPageId,
       name,
       slug: name.toLowerCase().replace(/\s+/g, '-'),
-      sections: [{ id: uuidv4(), type: 'hero', data: { title: name, subtitle: "Selamat Datang", bgImage: "https://picsum.photos/1920/1080", buttonText: "Info" } }],
+      sections: [{ id: uuidv4(), type: 'hero', data: { title: name, subtitle: "Selamat Datang", bgImage: "https://picsum.photos/1920/1080", buttonText: "Info", fontSize: 'md' } }],
       subPages: [],
       isOpen: true
     };
@@ -346,6 +382,10 @@ export default function App() {
         onClose={() => setShowSettings(false)} 
         currentFont={data.font || 'sans'}
         onFontChange={(font) => setData(prev => ({ ...prev, font }))}
+        primaryColor={data.primaryColor || '#1e40af'}
+        onPrimaryColorChange={(c) => setData(prev => ({ ...prev, primaryColor: c }))}
+        secondaryColor={data.secondaryColor || '#fbbf24'}
+        onSecondaryColorChange={(c) => setData(prev => ({ ...prev, secondaryColor: c }))}
       />
       
       <header className="bg-white border-b border-gray-200 h-16 flex items-center px-4 md:px-6 justify-between shrink-0 z-40 shadow-sm relative">
@@ -375,7 +415,7 @@ export default function App() {
                   <button onClick={() => setIsPreview(true)} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${isPreview ? 'bg-white text-primary shadow-sm' : 'text-gray-500'}`}><Icons.Eye size={12} /></button>
                 </div>
                 <button onClick={handleSave} disabled={isSaving} className="bg-primary text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-70 transition-colors shadow-sm">{isSaving ? 'Saving...' : 'Simpan'}</button>
-                <button onClick={() => logoutUser()} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Log Keluar"><Icons.LogIn className="rotate-180" size={18} /></button>
+                <button onClick={() => { if(window.confirm('Log keluar?')) { setUser(null); setIsPreview(true); logoutUser(); } }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Log Keluar"><Icons.LogIn className="rotate-180" size={18} /></button>
              </div>
           ) : (
             <button 

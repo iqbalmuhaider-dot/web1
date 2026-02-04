@@ -106,6 +106,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock, pages, activePageI
     { type: 'stats', icon: 'BarChart', label: 'Dashboard', desc: 'Statistik Guru/Murid' },
     { type: 'orgChart', icon: 'Users', label: 'Carta Organisasi', desc: 'Senarai AJK/Guru' },
     { type: 'staffGrid', icon: 'Grid', label: 'Grid Staf', desc: 'Galeri Gambar Guru' },
+    { type: 'divider', icon: 'Link', label: 'Divider (Garis)', desc: 'Pemisah Melintang' },
+    { type: 'spacer', icon: 'Layout', label: 'Spacer (Ruang)', desc: 'Ruang Kosong Mendatar' },
     { type: 'time', icon: 'Clock', label: 'Jam Digital', desc: 'Waktu & Tarikh' },
     { type: 'calendar', icon: 'Calendar', label: 'Takwim', desc: 'Senarai Acara' },
     { type: 'visitor', icon: 'Eye', label: 'Pelawat', desc: 'Kaunter Pelawat' },

@@ -7,6 +7,11 @@
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+      :root {
+        --color-primary: #1e40af; /* Default Blue 800 */
+        --color-secondary: #fbbf24; /* Default Amber 400 */
+      }
+
       /* Force light background for scrollbar consistency */
       html, body {
         background-color: #f8fafc;
@@ -27,7 +32,7 @@
         border: 2px solid #f1f5f9;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #1e40af;
+        background: var(--color-primary);
       }
       
       /* Standard Scrollbar for Firefox */
@@ -55,8 +60,8 @@
         theme: {
           extend: {
             colors: {
-              primary: '#1e40af', // Blue 800
-              secondary: '#fbbf24', // Amber 400
+              primary: 'var(--color-primary)',
+              secondary: 'var(--color-secondary)',
             },
             borderRadius: {
               '3xl': '1.5rem',

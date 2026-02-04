@@ -1,4 +1,4 @@
-export type BlockType = 'hero' | 'feature' | 'content' | 'gallery' | 'contact' | 'footer' | 'html' | 'drive' | 'video' | 'image' | 'ticker' | 'orgChart' | 'stats' | 'time' | 'visitor' | 'speech' | 'calendar' | 'downloads' | 'faq' | 'cta' | 'countdown' | 'notice' | 'table' | 'staffGrid' | 'testimonial' | 'linkList' | 'news' | 'definition';
+export type BlockType = 'hero' | 'feature' | 'content' | 'gallery' | 'contact' | 'footer' | 'html' | 'drive' | 'video' | 'image' | 'ticker' | 'orgChart' | 'stats' | 'time' | 'visitor' | 'speech' | 'calendar' | 'downloads' | 'faq' | 'cta' | 'countdown' | 'notice' | 'table' | 'staffGrid' | 'testimonial' | 'linkList' | 'news' | 'definition' | 'divider' | 'spacer';
 
 export interface BaseBlock {
   id: string;
@@ -13,6 +13,7 @@ export interface HeroBlock extends BaseBlock {
     bgImage: string;
     buttonText: string;
     buttonLink?: string;
+    fontSize?: 'sm' | 'md' | 'lg' | 'xl';
   };
 }
 
@@ -28,6 +29,7 @@ export interface FeatureBlock extends BaseBlock {
   data: {
     title: string;
     features: FeatureItem[];
+    fontSize?: 'sm' | 'md' | 'lg' | 'xl';
   };
 }
 
@@ -37,6 +39,7 @@ export interface ContentBlock extends BaseBlock {
     title: string;
     body: string;
     alignment: 'left' | 'right' | 'center';
+    fontSize?: 'sm' | 'md' | 'lg' | 'xl';
   };
 }
 
@@ -97,17 +100,15 @@ export interface ImageBlock extends BaseBlock {
     url: string;
     caption: string;
     width: 'full' | 'large' | 'medium' | 'small';
-    animation?: 'none' | 'zoom' | 'pan'; // Added animation prop
+    animation?: 'none' | 'zoom' | 'pan';
   };
 }
-
-// --- UPDATED BLOCKS ---
 
 export interface TickerBlock extends BaseBlock {
   type: 'ticker';
   data: {
-    label: string; // "INFO TERKINI"
-    text: string; // The scrolling text
+    label: string;
+    text: string;
     direction: 'left' | 'right';
     speed: number;
   };
@@ -125,6 +126,7 @@ export interface OrgChartBlock extends BaseBlock {
   data: {
     title: string;
     members: OrgMember[];
+    fontSize?: 'sm' | 'md' | 'lg' | 'xl';
   };
 }
 
@@ -171,10 +173,9 @@ export interface SpeechBlock extends BaseBlock {
     imageUrl: string;
     authorName: string;
     authorRole: string;
+    fontSize?: 'sm' | 'md' | 'lg' | 'xl';
   };
 }
-
-// --- NEW BLOCKS ---
 
 export interface CalendarEvent {
   date: string;
@@ -232,7 +233,7 @@ export interface CountdownBlock extends BaseBlock {
   type: 'countdown';
   data: {
     title: string;
-    targetDate: string; // YYYY-MM-DD
+    targetDate: string;
   };
 }
 
@@ -242,6 +243,7 @@ export interface NoticeBlock extends BaseBlock {
     title: string;
     content: string;
     color: 'yellow' | 'blue' | 'red' | 'green';
+    fontSize?: 'sm' | 'md' | 'lg' | 'xl';
   };
 }
 
@@ -255,7 +257,7 @@ export interface TableBlock extends BaseBlock {
   type: 'table';
   data: {
     title: string;
-    headers: [string, string, string]; // Fixed 3 columns for simplicity
+    headers: [string, string, string];
     rows: TableRow[];
   };
 }
@@ -290,7 +292,6 @@ export interface LinkListBlock extends BaseBlock {
   };
 }
 
-// NEW: News with Tags
 export interface NewsItem {
   id: string;
   title: string;
@@ -307,7 +308,6 @@ export interface NewsBlock extends BaseBlock {
   };
 }
 
-// NEW: Definition (Logo/Flag meaning)
 export interface DefinitionItem {
   term: string;
   definition: string;
@@ -319,6 +319,23 @@ export interface DefinitionBlock extends BaseBlock {
     title: string;
     imageUrl: string;
     items: DefinitionItem[];
+  };
+}
+
+// NEW WIDGETS
+export interface DividerBlock extends BaseBlock {
+  type: 'divider';
+  data: {
+    style: 'solid' | 'dashed' | 'dotted';
+    color: string;
+    thickness: number;
+  };
+}
+
+export interface SpacerBlock extends BaseBlock {
+  type: 'spacer';
+  data: {
+    height: number;
   };
 }
 
@@ -350,7 +367,9 @@ export type SectionBlock =
   | TestimonialBlock
   | LinkListBlock
   | NewsBlock
-  | DefinitionBlock;
+  | DefinitionBlock
+  | DividerBlock
+  | SpacerBlock;
 
 export interface Page {
   id: string;
@@ -364,5 +383,7 @@ export interface Page {
 export interface WebsiteData {
   title: string;
   font: string; // 'sans', 'serif', 'mono'
+  primaryColor?: string;
+  secondaryColor?: string;
   pages: Page[];
 }

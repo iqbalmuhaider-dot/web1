@@ -7,11 +7,19 @@ interface SettingsModalProps {
   onClose: () => void;
   currentFont: string;
   onFontChange: (font: string) => void;
+  primaryColor: string;
+  onPrimaryColorChange: (color: string) => void;
+  secondaryColor: string;
+  onSecondaryColorChange: (color: string) => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentFont, onFontChange }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ 
+  isOpen, onClose, currentFont, onFontChange,
+  primaryColor, onPrimaryColorChange, secondaryColor, onSecondaryColorChange
+}) => {
   const [firebaseConfigStr, setFirebaseConfigStr] = useState('');
   const [status, setStatus] = useState('');
+  const [activeTab, setActiveTab] = useState<'theme' | 'system'>('theme');
 
   useEffect(() => {
     if (isOpen) {
@@ -20,7 +28,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, c
     }
   }, [isOpen]);
 
-  const handleSave = () => {
+  const handleSaveConfig = () => {
     try {
       if (firebaseConfigStr.trim()) {
         JSON.parse(firebaseConfigStr);
@@ -31,8 +39,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, c
       setStatus('Disimpan! Sila refresh jika perlu.');
       setTimeout(() => {
         setStatus('');
-        onClose();
-      }, 1000);
+      }, 2000);
     } catch (e) {
       setStatus('Ralat: Format JSON Firebase tidak sah.');
     }
@@ -41,62 +48,129 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, c
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Icons.Sparkles className="text-primary" /> Tetapan Sistem
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="flex justify-between items-center p-6 border-b border-gray-100">
+          <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800">
+            <Icons.Settings className="text-primary" /> Tetapan
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><Icons.X /></button>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"><Icons.X /></button>
         </div>
 
-        <div className="space-y-6">
-          {/* Appearance Settings */}
-          <div>
-            <h3 className="font-bold text-gray-800 mb-2 border-b pb-1">Penampilan</h3>
-            <div className="flex flex-col gap-2">
-               <label className="text-sm font-medium text-gray-600">Jenis Font Utama</label>
-               <select 
-                 value={currentFont}
-                 onChange={(e) => onFontChange(e.target.value)}
-                 className="border rounded-lg p-2 w-full"
-               >
-                 <option value="sans">Sans Serif (Moderna)</option>
-                 <option value="serif">Serif (Klasik/Formal)</option>
-                 <option value="mono">Monospace (Teknikal)</option>
-               </select>
+        <div className="flex border-b border-gray-100">
+          <button 
+            onClick={() => setActiveTab('theme')}
+            className={`flex-1 py-3 text-sm font-bold text-center transition-colors ${activeTab === 'theme' ? 'text-primary border-b-2 border-primary bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+          >
+            Tema & Warna
+          </button>
+          <button 
+            onClick={() => setActiveTab('system')}
+            className={`flex-1 py-3 text-sm font-bold text-center transition-colors ${activeTab === 'system' ? 'text-primary border-b-2 border-primary bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+          >
+            Pangkalan Data
+          </button>
+        </div>
+
+        <div className="p-6 overflow-y-auto flex-1">
+          {activeTab === 'theme' ? (
+            <div className="space-y-8">
+              {/* Fonts */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-3">Jenis Tulisan (Font)</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { val: 'sans', label: 'Moderna', font: 'font-sans' },
+                    { val: 'serif', label: 'Klasik', font: 'font-serif' },
+                    { val: 'mono', label: 'Teknikal', font: 'font-mono' }
+                  ].map((opt) => (
+                    <button
+                      key={opt.val}
+                      onClick={() => onFontChange(opt.val)}
+                      className={`p-3 rounded-xl border-2 text-center transition-all ${currentFont === opt.val ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 hover:border-gray-300 text-gray-600'}`}
+                    >
+                      <span className={`block text-lg ${opt.font} mb-1`}>Ag</span>
+                      <span className="text-xs font-bold">{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Colors */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-3">Warna Tema</label>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 border border-gray-200 rounded-xl bg-gray-50">
+                     <div className="flex flex-col">
+                       <span className="text-sm font-bold text-gray-700">Warna Utama (Primary)</span>
+                       <span className="text-xs text-gray-500">Warna dominan untuk butang, header & highlight.</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <span className="text-xs font-mono bg-white px-2 py-1 rounded border">{primaryColor}</span>
+                       <input 
+                         type="color" 
+                         value={primaryColor}
+                         onChange={(e) => onPrimaryColorChange(e.target.value)}
+                         className="w-10 h-10 rounded-lg cursor-pointer border-0 p-0 overflow-hidden shadow-sm"
+                       />
+                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 border border-gray-200 rounded-xl bg-gray-50">
+                     <div className="flex flex-col">
+                       <span className="text-sm font-bold text-gray-700">Warna Kedua (Secondary)</span>
+                       <span className="text-xs text-gray-500">Warna aksen untuk elemen hiasan.</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <span className="text-xs font-mono bg-white px-2 py-1 rounded border">{secondaryColor}</span>
+                       <input 
+                         type="color" 
+                         value={secondaryColor}
+                         onChange={(e) => onSecondaryColorChange(e.target.value)}
+                         className="w-10 h-10 rounded-lg cursor-pointer border-0 p-0 overflow-hidden shadow-sm"
+                       />
+                     </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-blue-50 text-blue-800 rounded-xl text-xs flex gap-3 items-start">
+                <Icons.Info size={16} className="shrink-0 mt-0.5" />
+                <p>Perubahan tema dipaparkan secara langsung. Jangan lupa tekan butang <b>Simpan</b> di bahagian atas laman untuk mengekalkan perubahan.</p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="p-4 bg-yellow-50 text-yellow-800 rounded-xl text-xs border border-yellow-200">
+                 <h4 className="font-bold mb-1 flex items-center gap-2"><Icons.AlertTriangle size={14}/> Zon Teknikal</h4>
+                 Ruangan ini adalah untuk konfigurasi sambungan ke Firebase. Hanya ubah jika anda tahu apa yang anda lakukan.
+              </div>
 
-          {/* Database Settings */}
-          <div>
-            <h3 className="font-bold text-gray-800 mb-2 border-b pb-1">Pangkalan Data (Advanced)</h3>
-            <div className="p-3 bg-blue-50 rounded-lg text-xs text-blue-800 border border-blue-200 mb-2">
-               Firebase digunakan untuk menyimpan data website anda.
-            </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Firebase Configuration (JSON)</label>
+                <textarea 
+                  rows={8}
+                  value={firebaseConfigStr}
+                  onChange={(e) => setFirebaseConfigStr(e.target.value)}
+                  placeholder='{"apiKey": "...", ...}'
+                  className="w-full border border-gray-300 rounded-xl p-3 text-xs font-mono focus:ring-2 ring-primary focus:border-primary outline-none"
+                />
+              </div>
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Firebase Config (JSON)</label>
-            <textarea 
-              rows={6}
-              value={firebaseConfigStr}
-              onChange={(e) => setFirebaseConfigStr(e.target.value)}
-              placeholder='{"apiKey": "...", ...}'
-              className="w-full border rounded-lg p-2 text-xs font-mono focus:ring-2 ring-primary outline-none"
-            />
-          </div>
+              {status && (
+                <div className={`p-3 rounded-xl text-sm font-bold text-center ${status.includes('Ralat') ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                  {status}
+                </div>
+              )}
 
-          {status && (
-            <div className={`p-2 rounded text-sm text-center ${status.includes('Ralat') ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
-              {status}
+              <button 
+                onClick={handleSaveConfig}
+                className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold hover:bg-black transition-colors flex items-center justify-center gap-2"
+              >
+                <Icons.Save size={16} /> Simpan Konfigurasi
+              </button>
             </div>
           )}
-
-          <button 
-            onClick={handleSave}
-            className="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-          >
-            Simpan Konfigurasi
-          </button>
         </div>
       </div>
     </div>

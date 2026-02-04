@@ -7,7 +7,8 @@ import {
   Star, Heart, Shield, Zap, Home, Book, Clock, Calendar,
   LogIn, Activity, BarChart, Link, MessageSquare, Briefcase,
   UserPlus, FileText, HelpCircle, Megaphone, Timer, StickyNote,
-  Table, Grid, List, Download, Quote, Newspaper, Tag, Flag
+  Table, Grid, List, Download, Quote, Newspaper, Tag, Flag,
+  Settings, AlertTriangle, Info
 } from 'lucide-react';
 
 export const Icons = {
@@ -62,7 +63,10 @@ export const Icons = {
   Quote,
   Newspaper,
   Tag,
-  Flag
+  Flag,
+  Settings,
+  AlertTriangle,
+  Info
 };
 
 export const iconList = Object.keys(Icons);
