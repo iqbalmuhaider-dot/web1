@@ -14,7 +14,6 @@ import {
   subscribeToAuth 
 } from './services/firebase';
 import { SettingsModal } from './components/SettingsModal';
-import { User } from 'firebase/auth';
 
 // --- HELPER FUNCTIONS FOR TREE MANIPULATION ---
 
@@ -163,7 +162,7 @@ export default function App() {
   const [activePageId, setActivePageId] = useState<string>(INITIAL_DATA.pages[0].id);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -216,7 +215,7 @@ export default function App() {
     } else {
       const password = window.prompt("Masukkan Kata Laluan Admin:");
       if (password === "admin123") {
-        setUser({ uid: 'admin-local', email: 'admin@skmt.edu.my', displayName: 'Admin SKMT' } as User);
+        setUser({ uid: 'admin-local', email: 'admin@skmt.edu.my', displayName: 'Admin SKMT' } as any);
         setIsPreview(false);
       } else if (password === "" || password === null) {
         await loginWithGoogle();
@@ -233,8 +232,9 @@ export default function App() {
     }
 
     const id = uuidv4();
+    // DEFINE DEFAULTS FOR ALL BLOCK TYPES TO PREVENT CRASHES
     const defaults: any = {
-       hero: { type: 'hero', data: { title: "Tajuk Baru", subtitle: "Subtajuk", bgImage: "https://picsum.photos/1920/1080", buttonText: "Klik", fontSize: 'md', height: 500 }, width: 'w-full' },
+       hero: { type: 'hero', data: { title: "Tajuk Baru", subtitle: "Subtajuk", bgImage: "https://picsum.photos/1920/1080", fontSize: 'md', height: 500 }, width: 'w-full' },
        title: { type: 'title', data: { text: "Tajuk Seksyen", alignment: 'center', fontSize: '2xl' }, width: 'w-full' },
        navbar: { type: 'navbar', data: { style: 'light', alignment: 'center' }, width: 'w-full' },
        history: { type: 'history', data: { title: "Sejarah Sekolah", body: "Ditubuhkan pada tahun..." }, width: 'w-full' },
@@ -242,17 +242,37 @@ export default function App() {
        feature: { type: 'feature', data: { title: "Ciri-Ciri", features: [{ title: "Ciri 1", description: "Deskripsi", icon: "Star" }], fontSize: 'md' }, width: 'w-full' },
        content: { type: 'content', data: { title: "Tajuk", body: "Kandungan teks...", alignment: "left", fontSize: 'md' }, width: 'w-full' },
        gallery: { type: 'gallery', data: { title: "Galeri", images: ["https://picsum.photos/400"] }, width: 'w-full' },
-       contact: { type: 'contact', data: { title: "Hubungi", email: "info@skmt.edu.my", phone: "123", address: "Alamat", mapUrl: "" }, width: 'w-full' },
+       contact: { type: 'contact', data: { title: "Hubungi", email: "info@skmt.edu.my", phone: "123", address: "Alamat", mapUrl: "", socialLinks: [] }, width: 'w-full' },
        footer: { type: 'footer', data: { copyright: "© 2024 SKMT" }, width: 'w-full' },
        ticker: { type: 'ticker', data: { label: "INFO", text: "Teks bergerak...", direction: 'left', speed: 20 }, width: 'w-full' },
        time: { type: 'time', data: { format: '12h', showDate: true, alignment: 'center', bgColor: '#1e40af', textColor: '#ffffff' }, width: 'w-full' },
-       // Defaults for other widgets
+       button: { type: 'button', data: { label: "Butang", linkType: "external", url: "#", alignment: "center", style: "primary", size: "md" }, width: 'w-full' },
        divider: { type: 'divider', data: { style: 'solid', color: '#e5e7eb', thickness: 2 }, width: 'w-full' },
        spacer: { type: 'spacer', data: { height: 50 }, width: 'w-full' },
-       // ... existing types mapped ...
+       
+       // Missing Defaults Added Below to Fix White Screen
+       linkList: { type: 'linkList', data: { title: "Pautan Pantas", links: [{ label: "Pautan 1", url: "#" }] }, width: 'w-full' },
+       table: { type: 'table', data: { title: "Jadual", headers: ["Perkara", "Keterangan", "Catatan"], rows: [{col1: "Data 1", col2: "Data 2", col3: "Data 3"}] }, width: 'w-full' },
+       visitor: { type: 'visitor', data: { label: "Jumlah Pelawat", count: 1234, showLiveIndicator: true }, width: 'w-full' },
+       orgChart: { type: 'orgChart', data: { title: "Carta Organisasi", members: [{ id: uuidv4(), name: "Nama", position: "Jawatan", imageUrl: "https://picsum.photos/200" }] }, width: 'w-full' },
+       staffGrid: { type: 'staffGrid', data: { title: "Direktori Staf", members: [{ id: uuidv4(), name: "Cikgu A", position: "Guru", imageUrl: "https://picsum.photos/200" }] }, width: 'w-full' },
+       calendar: { type: 'calendar', data: { title: "Takwim Sekolah", events: [{ date: "1", month: "JAN", title: "Acara", desc: "Keterangan" }] }, width: 'w-full' },
+       faq: { type: 'faq', data: { title: "Soalan Lazim", items: [{ question: "Soalan 1?", answer: "Jawapan..." }] }, width: 'w-full' },
+       downloads: { type: 'downloads', data: { title: "Muat Turun", items: [{ title: "Borang", url: "#", type: "PDF" }] }, width: 'w-full' },
+       countdown: { type: 'countdown', data: { title: "Menuju Hari Sukan", targetDate: new Date().toISOString().split('T')[0] }, width: 'w-full' },
+       cta: { type: 'cta', data: { text: "Sertai Kami Sekarang!", buttonLabel: "Daftar", buttonLink: "#", bgColor: "#1e40af" }, width: 'w-full' },
+       notice: { type: 'notice', data: { title: "Notis Penting", content: "Sila ambil perhatian...", color: "yellow" }, width: 'w-full' },
+       testimonial: { type: 'testimonial', data: { quote: "Sekolah terbaik!", author: "Alumni", role: "Bekas Pelajar" }, width: 'w-full' },
+       news: { type: 'news', data: { title: "Berita Terkini", items: [{ id: uuidv4(), title: "Berita Utama", date: new Date().toISOString().split('T')[0], tag: "UMUM", content: "Isi berita..." }] }, width: 'w-full' },
+       definition: { type: 'definition', data: { title: "Definisi", imageUrl: "https://picsum.photos/300", items: [{ term: "Istilah", definition: "Maksud" }] }, width: 'w-full' },
+       video: { type: 'video', data: { title: "Video Korporat", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }, width: 'w-full' },
+       drive: { type: 'drive', data: { title: "Dokumen Drive", embedUrl: "", height: "500px" }, width: 'w-full' },
+       html: { type: 'html', data: { code: "<div>HTML Code</div>", height: "100px" }, width: 'w-full' },
+       speech: { type: 'speech', data: { title: "Sekapur Sirih", text: "Ucapan...", imageUrl: "https://picsum.photos/300", authorName: "Nama", authorRole: "Jawatan", fontSize: "md", alignment: "left", imageSize: "medium" }, width: 'w-full' },
+       stats: { type: 'stats', data: { title: "Statistik", items: [{ id: uuidv4(), label: "Murid", value: "1000", icon: "Users" }] }, width: 'w-full' }
     };
     
-    // Generic fallback
+    // Generic fallback if type is somehow not in defaults
     const newBlock = { id, ...(defaults[type] || { type, data: {}, width: 'w-full' }) };
     if (!defaults[type] && type === 'image') {
         newBlock.data = { url: "https://picsum.photos/800/400", caption: "", width: "medium" };
@@ -330,7 +350,7 @@ export default function App() {
       id: newPageId,
       name,
       slug: name.toLowerCase().replace(/\s+/g, '-'),
-      sections: [{ id: uuidv4(), type: 'hero', data: { title: name, subtitle: "", bgImage: "https://picsum.photos/1920/1080", buttonText: "Info", height: 400 }, width: 'w-full' }],
+      sections: [{ id: uuidv4(), type: 'hero', data: { title: name, subtitle: "", bgImage: "https://picsum.photos/1920/1080", height: 400 }, width: 'w-full' }],
       subPages: [],
       isOpen: true
     };

@@ -9,7 +9,8 @@ import {
   UserPlus, FileText, HelpCircle, Megaphone, Timer, StickyNote,
   Table, Grid, List, Download, Quote, Newspaper, Tag, Flag,
   Settings, AlertTriangle, Info, AlignLeft, AlignCenter, AlignJustify,
-  ExternalLink, ChevronDown, Columns, AlignRight, Music, ChevronsUp, ChevronsDown
+  ExternalLink, ChevronDown, Columns, AlignRight, Music, ChevronsUp, ChevronsDown,
+  Facebook, Instagram, Twitter, Linkedin, Github
 } from 'lucide-react';
 
 export const Icons = {
@@ -77,7 +78,12 @@ export const Icons = {
   AlignRight,
   Music,
   ChevronsUp,
-  ChevronsDown
+  ChevronsDown,
+  Facebook,
+  Instagram,
+  Twitter,
+  Linkedin,
+  Github
 };
 
 export const iconList = Object.keys(Icons);
@@ -88,8 +94,15 @@ export const getIconByName = (name: string, className?: string) => {
     return <img src={name} alt="icon" className={`${className} object-contain`} />;
   }
 
-  // Handle Lucide Icons
+  // Handle Lucide Icons (Case insensitive lookup)
   const normalized = name.charAt(0).toUpperCase() + name.slice(1);
-  const IconComponent = (Icons as any)[normalized];
+  // Try exact match first, then case insensitive keys
+  let IconComponent = (Icons as any)[normalized];
+  
+  if (!IconComponent) {
+     const key = Object.keys(Icons).find(k => k.toLowerCase() === name.toLowerCase());
+     if (key) IconComponent = (Icons as any)[key];
+  }
+
   return IconComponent ? <IconComponent className={className} /> : <Icons.Sparkles className={className} />;
 };

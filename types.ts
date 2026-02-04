@@ -1,4 +1,4 @@
-export type BlockType = 'hero' | 'feature' | 'content' | 'gallery' | 'contact' | 'footer' | 'html' | 'drive' | 'video' | 'image' | 'ticker' | 'orgChart' | 'stats' | 'time' | 'visitor' | 'speech' | 'calendar' | 'downloads' | 'faq' | 'cta' | 'countdown' | 'notice' | 'table' | 'staffGrid' | 'testimonial' | 'linkList' | 'news' | 'definition' | 'divider' | 'spacer' | 'title' | 'navbar' | 'history' | 'audio';
+export type BlockType = 'hero' | 'feature' | 'content' | 'gallery' | 'contact' | 'footer' | 'html' | 'drive' | 'video' | 'image' | 'ticker' | 'orgChart' | 'stats' | 'time' | 'visitor' | 'speech' | 'calendar' | 'downloads' | 'faq' | 'cta' | 'countdown' | 'notice' | 'table' | 'staffGrid' | 'testimonial' | 'linkList' | 'news' | 'definition' | 'divider' | 'spacer' | 'title' | 'navbar' | 'history' | 'audio' | 'button';
 
 export type BlockWidth = 'w-full' | 'w-3/4' | 'w-2/3' | 'w-1/2' | 'w-1/3' | 'w-1/4';
 export type BlockPadding = 'py-0' | 'py-4' | 'py-8' | 'py-12' | 'py-16' | 'py-20' | 'py-24' | 'py-32';
@@ -16,11 +16,24 @@ export interface HeroBlock extends BaseBlock {
     title: string;
     subtitle: string;
     bgImage: string;
-    buttonText: string;
-    buttonLink?: string;
+    // buttonText removed as requested
     fontSize?: 'sm' | 'md' | 'lg' | 'xl';
     overlayOpacity?: number;
     height?: number;
+  };
+}
+
+// New Button Block
+export interface ButtonBlock extends BaseBlock {
+  type: 'button';
+  data: {
+    label: string;
+    linkType: 'external' | 'internal';
+    url?: string;
+    pageId?: string;
+    alignment: 'left' | 'center' | 'right';
+    style: 'primary' | 'secondary' | 'outline';
+    size: 'sm' | 'md' | 'lg';
   };
 }
 
@@ -102,6 +115,7 @@ export interface ContactBlock extends BaseBlock {
     phone: string;
     address: string;
     mapUrl: string;
+    socialLinks?: { icon: string; url: string; }[]; // ADDED
   };
 }
 
@@ -419,7 +433,8 @@ export type SectionBlock =
   | TitleBlock
   | NavbarBlock
   | HistoryBlock
-  | AudioBlock;
+  | AudioBlock
+  | ButtonBlock;
 
 export interface Page {
   id: string;

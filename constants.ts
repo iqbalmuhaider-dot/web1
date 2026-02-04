@@ -24,7 +24,6 @@ export const INITIAL_DATA: WebsiteData = {
             title: "SK MASJID TANAH",
             subtitle: "PENDIDIKAN BERKUALITI INSAN TERDIDIK NEGARA SEJAHTERA",
             bgImage: "https://images.unsplash.com/photo-1577896334698-70c858c14172?q=80&w=2071&auto=format&fit=crop",
-            buttonText: "Hubungi Kami",
             fontSize: 'md',
             overlayOpacity: 0.8
           }

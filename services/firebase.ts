@@ -1,8 +1,13 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User, Auth } from 'firebase/auth';
+// Workaround for module resolution issues where firebase/auth exports are not found
+import * as firebaseAuth from 'firebase/auth';
 import { WebsiteData } from '../types';
+
+const { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } = firebaseAuth as any;
+type User = any;
+type Auth = any;
 
 let db: Firestore | null = null;
 let auth: Auth | null = null;
