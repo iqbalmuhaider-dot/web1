@@ -10,7 +10,8 @@ import {
   Table, Grid, List, Download, Quote, Newspaper, Tag, Flag,
   Settings, AlertTriangle, Info, AlignLeft, AlignCenter, AlignJustify,
   ExternalLink, ChevronDown, Columns, AlignRight, Music, ChevronsUp, ChevronsDown,
-  Facebook, Instagram, Twitter, Linkedin, Github
+  Facebook, Instagram, Twitter, Linkedin, Github,
+  ArrowRight, PlusCircle
 } from 'lucide-react';
 
 export const Icons = {
@@ -83,7 +84,9 @@ export const Icons = {
   Instagram,
   Twitter,
   Linkedin,
-  Github
+  Github,
+  ArrowRight,
+  PlusCircle
 };
 
 export const iconList = Object.keys(Icons);

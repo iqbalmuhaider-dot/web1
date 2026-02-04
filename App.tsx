@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { WebsiteData, SectionBlock, BlockType, Page, BlockWidth, BlockPadding } from './types';
+import { WebsiteData, SectionBlock, BlockType, Page, BlockWidth, BlockPadding, BlockStyle } from './types';
 import { INITIAL_DATA } from './constants';
 import { Sidebar } from './components/editor/Sidebar';
 import { BlockRenderer } from './components/blocks/Renderer';
@@ -165,6 +165,7 @@ export default function App() {
   const [user, setUser] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Mobile Menu State
 
   useEffect(() => {
     if (data.primaryColor) document.documentElement.style.setProperty('--color-primary', data.primaryColor);
@@ -235,7 +236,7 @@ export default function App() {
     // DEFINE DEFAULTS FOR ALL BLOCK TYPES TO PREVENT CRASHES
     const defaults: any = {
        hero: { type: 'hero', data: { title: "Tajuk Baru", subtitle: "Subtajuk", bgImage: "https://picsum.photos/1920/1080", fontSize: 'md', height: 500 }, width: 'w-full' },
-       title: { type: 'title', data: { text: "Tajuk Seksyen", alignment: 'center', fontSize: '2xl' }, width: 'w-full' },
+       title: { type: 'title', data: { text: "Tajuk Seksyen", alignment: 'center', fontSize: '2xl', url: '' }, width: 'w-full' },
        navbar: { type: 'navbar', data: { style: 'light', alignment: 'center' }, width: 'w-full' },
        history: { type: 'history', data: { title: "Sejarah Sekolah", body: "Ditubuhkan pada tahun..." }, width: 'w-full' },
        audio: { type: 'audio', data: { title: "Lagu Sekolah", audioUrl: "", autoPlay: false }, width: 'w-full' },
@@ -273,7 +274,7 @@ export default function App() {
     };
     
     // Generic fallback if type is somehow not in defaults
-    const newBlock = { id, ...(defaults[type] || { type, data: {}, width: 'w-full' }) };
+    const newBlock = { id, style: {}, ...(defaults[type] || { type, data: {}, width: 'w-full' }) };
     if (!defaults[type] && type === 'image') {
         newBlock.data = { url: "https://picsum.photos/800/400", caption: "", width: "medium" };
     }
@@ -313,6 +314,16 @@ export default function App() {
       pages: updatePageRecursive(prev.pages, activePageId, (page) => ({
         ...page,
         sections: page.sections.map(s => s.id === id ? { ...s, padding } : s)
+      }))
+    }));
+  };
+
+  const updateBlockStyle = (id: string, style: BlockStyle) => {
+    setData(prev => ({
+      ...prev,
+      pages: updatePageRecursive(prev.pages, activePageId, (page) => ({
+        ...page,
+        sections: page.sections.map(s => s.id === id ? { ...s, style } : s)
       }))
     }));
   };
@@ -401,11 +412,20 @@ export default function App() {
         onSecondaryColorChange={(c) => setData(prev => ({ ...prev, secondaryColor: c }))}
       />
       
-      {/* GLOBAL TOP HEADER */}
-      <header className="bg-white border-b border-gray-200 h-16 flex items-center px-4 md:px-6 justify-between shrink-0 z-40 shadow-sm relative">
-        <div className="flex items-center gap-3 min-w-[180px]"></div>
+      {/* GLOBAL TOP HEADER (Updated to be Sticky & Responsive) */}
+      <header className="bg-white/95 backdrop-blur-md border-b border-gray-200 h-16 flex items-center px-4 md:px-6 justify-between shrink-0 sticky top-0 z-[100] shadow-sm">
+        
+        {/* Mobile Menu Button */}
+        <div className="flex items-center md:hidden">
+           <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+              <Icons.AlignJustify size={24} />
+           </button>
+        </div>
 
-        <nav className="flex-1 flex justify-center px-4 h-full items-center">
+        <div className="hidden md:flex items-center gap-3 min-w-[180px]"></div>
+
+        {/* Desktop Navigation */}
+        <nav className="flex-1 hidden md:flex justify-center px-4 h-full items-center">
            <div className="flex gap-2 items-center flex-wrap justify-center h-full overflow-visible">
              {data.pages.map(page => (
                <NavItem 
@@ -418,16 +438,21 @@ export default function App() {
            </div>
         </nav>
 
-        <div className="flex items-center gap-2 min-w-[180px] justify-end">
+        {/* Brand Name on Mobile (Centered) */}
+        <div className="md:hidden flex-1 text-center font-bold text-gray-800 text-sm truncate px-2">
+           {data.title}
+        </div>
+
+        <div className="flex items-center gap-2 min-w-[100px] md:min-w-[180px] justify-end">
           {user ? (
              <div className="flex items-center gap-2">
                 <button onClick={() => setShowSettings(true)} className="p-2 text-gray-500 hover:text-primary hover:bg-gray-50 rounded-lg"><Icons.Sparkles size={18} /></button>
-                <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
+                <div className="hidden md:flex bg-gray-100 p-1 rounded-lg border border-gray-200">
                   <button onClick={() => setIsPreview(false)} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${!isPreview ? 'bg-white text-primary shadow-sm' : 'text-gray-500'}`}><Icons.Edit size={12} /></button>
                   <button onClick={() => setIsPreview(true)} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${isPreview ? 'bg-white text-primary shadow-sm' : 'text-gray-500'}`}><Icons.Eye size={12} /></button>
                 </div>
-                <button onClick={handleSave} disabled={isSaving} className="bg-primary text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-blue-700 shadow-sm">{isSaving ? '...' : 'Simpan'}</button>
-                <button onClick={() => { if(window.confirm('Log keluar?')) { setUser(null); setIsPreview(true); logoutUser(); } }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Icons.LogIn className="rotate-180" size={18} /></button>
+                <button onClick={handleSave} disabled={isSaving} className="bg-primary text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs font-medium hover:bg-blue-700 shadow-sm">{isSaving ? '...' : 'Simpan'}</button>
+                <button onClick={() => { if(window.confirm('Log keluar?')) { setUser(null); setIsPreview(true); logoutUser(); } }} className="hidden md:block p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Icons.LogIn className="rotate-180" size={18} /></button>
              </div>
           ) : (
             <button onClick={handleAdminLogin} className="flex items-center justify-center p-2 text-gray-300 hover:text-primary hover:bg-blue-50 rounded-full"><Icons.LogIn size={20} /></button>
@@ -435,8 +460,50 @@ export default function App() {
         </div>
       </header>
 
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+         <div className="md:hidden fixed inset-0 top-16 z-[90] bg-white overflow-y-auto pb-20 animate-in slide-in-from-top-10">
+            <div className="p-4 space-y-2">
+               {data.pages.map(page => (
+                  <div key={page.id} className="border-b border-gray-100 pb-2">
+                     <button 
+                        onClick={() => { setActivePageId(page.id); setMobileMenuOpen(false); }}
+                        className={`w-full text-left py-3 px-4 rounded-xl font-bold text-lg ${activePageId === page.id ? 'bg-blue-50 text-primary' : 'text-gray-800'}`}
+                     >
+                        {page.name}
+                     </button>
+                     {page.subPages && page.subPages.length > 0 && (
+                        <div className="pl-6 space-y-1 mt-1">
+                           {page.subPages.map(sub => (
+                              <button
+                                 key={sub.id}
+                                 onClick={() => { setActivePageId(sub.id); setMobileMenuOpen(false); }}
+                                 className={`w-full text-left py-2 px-4 rounded-lg text-sm font-medium ${activePageId === sub.id ? 'text-primary bg-blue-50/50' : 'text-gray-600'}`}
+                              >
+                                 {sub.name}
+                              </button>
+                           ))}
+                        </div>
+                     )}
+                  </div>
+               ))}
+               {user && (
+                  <div className="pt-4 mt-4 border-t border-gray-200">
+                     <button onClick={() => { setIsPreview(!isPreview); setMobileMenuOpen(false); }} className="w-full text-left py-3 px-4 flex items-center gap-3 font-bold text-gray-700">
+                        {isPreview ? <Icons.Edit size={18}/> : <Icons.Eye size={18}/>}
+                        {isPreview ? 'Mod Sunting' : 'Mod Lihat'}
+                     </button>
+                     <button onClick={() => { if(window.confirm('Log keluar?')) { setUser(null); setIsPreview(true); logoutUser(); setMobileMenuOpen(false); } }} className="w-full text-left py-3 px-4 flex items-center gap-3 font-bold text-red-500">
+                        <Icons.LogIn className="rotate-180" size={18} /> Log Keluar
+                     </button>
+                  </div>
+               )}
+            </div>
+         </div>
+      )}
+
       <div className="flex flex-1 overflow-hidden relative">
-        <div className={`transition-all duration-300 ease-in-out z-30 h-full border-r border-gray-200 ${isPreview || !user ? 'w-0 opacity-0 overflow-hidden border-none' : 'w-72 opacity-100'}`}>
+        <div className={`transition-all duration-300 ease-in-out z-30 h-full border-r border-gray-200 ${isPreview || !user ? 'w-0 opacity-0 overflow-hidden border-none' : 'w-72 opacity-100 hidden md:block'}`}>
           <div className="w-72 h-full"> 
             <Sidebar onAddBlock={addBlock} pages={data.pages} activePageId={activePageId} onSwitchPage={setActivePageId} onAddPage={addPage} onDeletePage={deletePage} onMovePage={movePage} onTogglePage={togglePageOpen} />
           </div>
@@ -493,6 +560,7 @@ export default function App() {
                         onDelete={deleteBlock} 
                         onUpdateWidth={updateBlockWidth}
                         onUpdatePadding={updateBlockPadding}
+                        onUpdateStyle={updateBlockStyle}
                         isPreview={isPreview || !user} 
                         isSelected={selectedBlockId === block.id} 
                         onClick={() => setSelectedBlockId(block.id)}

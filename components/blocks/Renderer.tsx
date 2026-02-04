@@ -148,11 +148,11 @@ export const TitleRenderer: React.FC<{ block: TitleBlock } & RendererProps> = ({
     '2xl': 'text-5xl'
   };
 
-  return (
-    <div className="py-6 px-4 relative group">
-       {isPreview ? (
+  const Content = () => (
+    <>
+      {isPreview ? (
          <h2 
-           className={`${sizeMap[block.data.fontSize]} font-bold text-${block.data.alignment} tracking-tight leading-tight`} 
+           className={`${sizeMap[block.data.fontSize]} font-bold text-${block.data.alignment} tracking-tight leading-tight ${block.data.url ? 'hover:text-primary transition-colors underline-offset-4 hover:underline' : ''}`} 
            style={{ color: block.data.color || 'inherit' }}
          >
            {block.data.text}
@@ -166,14 +166,43 @@ export const TitleRenderer: React.FC<{ block: TitleBlock } & RendererProps> = ({
            placeholder="Masukkan Tajuk..."
          />
        )}
+    </>
+  );
+
+  return (
+    <div className="py-6 px-4 relative group">
+       {/* If there is a URL and we are in preview mode, wrap in anchor tag */}
+       {block.data.url && isPreview ? (
+         <a href={block.data.url} target="_blank" rel="noopener noreferrer" className="block">
+           <Content />
+         </a>
+       ) : (
+         <Content />
+       )}
        
        {!isPreview && (
-          <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity bg-white border p-1 rounded flex gap-2 shadow-sm z-10">
-             <FontSizeControl value={block.data.fontSize === '2xl' ? 'xl' : block.data.fontSize} onChange={v => onUpdate(block.id, {...block.data, fontSize: v === 'xl' ? '2xl' : v})} />
-             <input type="color" value={block.data.color || '#000000'} onChange={e => onUpdate(block.id, {...block.data, color: e.target.value})} className="w-6 h-6 rounded cursor-pointer border-0" />
-             <button onClick={() => onUpdate(block.id, {...block.data, alignment: 'left'})} className="p-1 hover:bg-gray-100 rounded"><Icons.AlignLeft size={14}/></button>
-             <button onClick={() => onUpdate(block.id, {...block.data, alignment: 'center'})} className="p-1 hover:bg-gray-100 rounded"><Icons.AlignCenter size={14}/></button>
-             <button onClick={() => onUpdate(block.id, {...block.data, alignment: 'right'})} className="p-1 hover:bg-gray-100 rounded"><Icons.AlignRight size={14}/></button>
+          <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity bg-white border p-2 rounded flex flex-col gap-2 shadow-xl z-20 w-64">
+             <div className="flex gap-2 items-center">
+                <FontSizeControl value={block.data.fontSize === '2xl' ? 'xl' : block.data.fontSize} onChange={v => onUpdate(block.id, {...block.data, fontSize: v === 'xl' ? '2xl' : v})} />
+                <input type="color" value={block.data.color || '#000000'} onChange={e => onUpdate(block.id, {...block.data, color: e.target.value})} className="w-6 h-6 rounded cursor-pointer border-0" />
+             </div>
+             
+             <div className="flex gap-1 justify-between bg-gray-50 p-1 rounded">
+               <button onClick={() => onUpdate(block.id, {...block.data, alignment: 'left'})} className={`p-1 rounded ${block.data.alignment === 'left' ? 'bg-white shadow' : ''}`}><Icons.AlignLeft size={14}/></button>
+               <button onClick={() => onUpdate(block.id, {...block.data, alignment: 'center'})} className={`p-1 rounded ${block.data.alignment === 'center' ? 'bg-white shadow' : ''}`}><Icons.AlignCenter size={14}/></button>
+               <button onClick={() => onUpdate(block.id, {...block.data, alignment: 'right'})} className={`p-1 rounded ${block.data.alignment === 'right' ? 'bg-white shadow' : ''}`}><Icons.AlignRight size={14}/></button>
+             </div>
+
+             <div className="flex items-center gap-2 border-t pt-2">
+                <Icons.Link size={12} className="text-gray-400" />
+                <input 
+                  type="text" 
+                  value={block.data.url || ''} 
+                  onChange={e => onUpdate(block.id, {...block.data, url: e.target.value})} 
+                  placeholder="Link URL (Optional)" 
+                  className="text-xs border p-1 rounded w-full"
+                />
+             </div>
           </div>
        )}
     </div>
@@ -843,32 +872,82 @@ export const TestimonialRenderer: React.FC<{ block: TestimonialBlock } & Rendere
 }
 
 export const NewsRenderer: React.FC<{ block: NewsBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
+  const tagOptions = ['PENTADBIRAN', 'KURIKULUM', 'HAL EHWAL MURID', 'KOKURIKULUM', 'PENDIDIKAN KHAS'];
+
+  // Sorting logic could be added here if needed, e.g. .sort((a,b) => new Date(b.date) - new Date(a.date))
+
   return (
     <div className="py-12 px-6">
        {isPreview ? <h2 className="text-3xl font-bold mb-8 flex items-center gap-2"><Icons.Newspaper className="text-primary"/> {block.data.title}</h2> : <input value={block.data.title} onChange={e=>onUpdate(block.id, {...block.data, title: e.target.value})} className="text-3xl font-bold mb-8 w-full bg-transparent" />}
-       <div className="space-y-4">
+       
+       {/* Changed from space-y-4 to Grid Layout */}
+       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {(block.data.items || []).map((item, i) => (
-             <div key={i} className="flex gap-4 items-start p-4 bg-white rounded-xl border border-gray-100 hover:shadow-md transition-shadow group relative">
-                <div className="bg-blue-50 text-primary font-bold text-center p-2 rounded-lg w-16 shrink-0 leading-tight">
-                   <span className="text-xl block">{item.date.split('-')[2]}</span>
-                   <span className="text-[10px] uppercase">{new Date(item.date).toLocaleString('default', { month: 'short' })}</span>
-                </div>
-                <div className="flex-1">
-                   <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-bold bg-gray-100 px-2 py-0.5 rounded text-gray-600 uppercase">{item.tag}</span>
-                      {isPreview ? <h4 className="font-bold">{item.title}</h4> : <input value={item.title} onChange={e=>{const n=[...block.data.items];n[i].title=e.target.value;onUpdate(block.id,{...block.data, items:n})}} className="font-bold w-full" />}
+             <div key={i} className="flex flex-col h-full bg-white rounded-xl border border-gray-100 hover:shadow-lg transition-all group relative overflow-hidden">
+                {/* NEW BADGE LOGIC (if date is within last 7 days) */}
+                {(() => {
+                   const diff = new Date().getTime() - new Date(item.date).getTime();
+                   const days = diff / (1000 * 3600 * 24);
+                   return days < 7 ? <div className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm z-10 animate-pulse">BARU</div> : null;
+                })()}
+
+                <div className="p-5 flex-1 flex flex-col">
+                   <div className="flex justify-between items-start mb-3">
+                      <div className="bg-blue-50 text-primary font-bold text-center p-2 rounded-lg min-w-[60px] leading-tight">
+                         <span className="text-xl block">{item.date.split('-')[2]}</span>
+                         <span className="text-[10px] uppercase">{new Date(item.date).toLocaleString('default', { month: 'short' })}</span>
+                      </div>
+                      {!isPreview && (
+                         <div className="flex gap-1">
+                            <input type="date" value={item.date} onChange={e=>{const n=[...block.data.items];n[i].date=e.target.value;onUpdate(block.id,{...block.data, items:n})}} className="text-[10px] border p-1 rounded" />
+                            <button onClick={()=>{const n=[...block.data.items];n.splice(i,1);onUpdate(block.id,{...block.data, items:n})}} className="text-red-500 p-1 hover:bg-red-50 rounded"><Icons.Trash2 size={14}/></button>
+                         </div>
+                      )}
                    </div>
-                   {isPreview ? <p className="text-sm text-gray-600">{item.content}</p> : <textarea value={item.content} onChange={e=>{const n=[...block.data.items];n[i].content=e.target.value;onUpdate(block.id,{...block.data, items:n})}} className="text-sm w-full h-16 bg-transparent" />}
-                </div>
-                {!isPreview && (
-                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex flex-col gap-1 bg-white shadow rounded p-1 z-10">
-                      <input type="date" value={item.date} onChange={e=>{const n=[...block.data.items];n[i].date=e.target.value;onUpdate(block.id,{...block.data, items:n})}} className="text-[10px]" />
-                      <button onClick={()=>{const n=[...block.data.items];n.splice(i,1);onUpdate(block.id,{...block.data, items:n})}} className="text-red-500 text-xs">Delete</button>
+
+                   <div className="mb-2">
+                      {isPreview ? (
+                         <span className="text-[10px] font-bold bg-gray-100 px-2 py-1 rounded text-gray-600 uppercase inline-block mb-2">{item.tag}</span>
+                      ) : (
+                         <select value={item.tag} onChange={e=>{const n=[...block.data.items];n[i].tag=e.target.value as any;onUpdate(block.id,{...block.data, items:n})}} className="text-[10px] border p-1 rounded bg-gray-50 w-full mb-2">
+                            {tagOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                         </select>
+                      )}
+                      
+                      {isPreview ? (
+                         <h4 className="font-bold text-lg leading-tight mb-2 line-clamp-2 hover:text-primary transition-colors">{item.title}</h4>
+                      ) : (
+                         <input value={item.title} onChange={e=>{const n=[...block.data.items];n[i].title=e.target.value;onUpdate(block.id,{...block.data, items:n})}} className="font-bold w-full border-b border-dashed border-gray-300 focus:border-primary outline-none py-1" placeholder="Tajuk Berita" />
+                      )}
                    </div>
-                )}
+                   
+                   <div className="flex-1">
+                      {isPreview ? (
+                         <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">{item.content}</p>
+                      ) : (
+                         <textarea value={item.content} onChange={e=>{const n=[...block.data.items];n[i].content=e.target.value;onUpdate(block.id,{...block.data, items:n})}} className="text-sm w-full h-24 bg-gray-50 p-2 rounded border-none resize-none" placeholder="Isi kandungan..." />
+                      )}
+                   </div>
+                </div>
+                
+                {/* Read More Link (Optional) */}
+                <div className="px-5 pb-5 pt-0">
+                   <div className="w-full h-px bg-gray-100 mb-3"></div>
+                   <button className="text-xs font-bold text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
+                      Baca Selanjutnya <Icons.ArrowRight size={12} />
+                   </button>
+                </div>
              </div>
           ))}
-          {!isPreview && <button onClick={()=>onUpdate(block.id, {...block.data, items: [...(block.data.items || []), {id:uuidv4(), title:'Berita', date:'2024-01-01', tag:'UMUM', content:'Kandungan'}]})} className="w-full py-2 border-2 border-dashed rounded-lg text-gray-400">Tambah Berita</button>}
+          {!isPreview && (
+             <button 
+                onClick={()=>onUpdate(block.id, {...block.data, items: [{id:uuidv4(), title:'Berita Baru', date: new Date().toISOString().split('T')[0], tag:'PENTADBIRAN', content:'Masukkan info ringkas di sini...'}, ...(block.data.items || [])]})} 
+                className="flex flex-col items-center justify-center h-full min-h-[200px] border-2 border-dashed rounded-xl text-gray-400 hover:text-primary hover:border-primary hover:bg-blue-50 transition-all gap-2"
+             >
+                <Icons.PlusCircle size={32} />
+                <span className="font-bold text-sm">Tambah Berita</span>
+             </button>
+          )}
        </div>
     </div>
   )

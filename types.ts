@@ -3,11 +3,19 @@ export type BlockType = 'hero' | 'feature' | 'content' | 'gallery' | 'contact' |
 export type BlockWidth = 'w-full' | 'w-3/4' | 'w-2/3' | 'w-1/2' | 'w-1/3' | 'w-1/4';
 export type BlockPadding = 'py-0' | 'py-4' | 'py-8' | 'py-12' | 'py-16' | 'py-20' | 'py-24' | 'py-32';
 
+export interface BlockStyle {
+  backgroundColor?: string;
+  backgroundImage?: string;
+  textColor?: string;
+  backgroundOpacity?: number; // 0 to 100
+}
+
 export interface BaseBlock {
   id: string;
   type: BlockType;
   width?: BlockWidth;
-  padding?: BlockPadding; // New: Vertical padding control
+  padding?: BlockPadding;
+  style?: BlockStyle; // NEW: Custom style for background/theme
 }
 
 export interface HeroBlock extends BaseBlock {
@@ -16,7 +24,6 @@ export interface HeroBlock extends BaseBlock {
     title: string;
     subtitle: string;
     bgImage: string;
-    // buttonText removed as requested
     fontSize?: 'sm' | 'md' | 'lg' | 'xl';
     overlayOpacity?: number;
     height?: number;
@@ -44,6 +51,7 @@ export interface TitleBlock extends BaseBlock {
     alignment: 'left' | 'center' | 'right';
     fontSize: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
     color?: string;
+    url?: string; // Added for Direct Link
   };
 }
 
@@ -115,7 +123,7 @@ export interface ContactBlock extends BaseBlock {
     phone: string;
     address: string;
     mapUrl: string;
-    socialLinks?: { icon: string; url: string; }[]; // ADDED
+    socialLinks?: { icon: string; url: string; }[];
   };
 }
 
@@ -355,7 +363,7 @@ export interface NewsItem {
   id: string;
   title: string;
   date: string;
-  tag: 'PENTADBIRAN' | 'KURIKULUM' | 'HAL EHWAL MURID' | 'KOKURIKULUM' | 'PPKI' | 'KELAB KEBAJIKAN GURU DAN STAF';
+  tag: 'PENTADBIRAN' | 'KURIKULUM' | 'HAL EHWAL MURID' | 'KOKURIKULUM' | 'PENDIDIKAN KHAS'; // Updated Tags
   content: string;
   link?: string;
 }
