@@ -49,19 +49,17 @@ export const BlockWrapper: React.FC<BlockWrapperProps> = ({
   onClick
 }) => {
   // Map internal width values to Tailwind classes
-  // Default to w-full if undefined
+  // In edit mode, we want the width to apply effectively to allow side-by-side
   const widthClass = block.width || 'w-full';
   
-  // Padding class, default to py-0 (inner renderers usually handle default padding, 
-  // but if we use Wrapper for padding, renderers should ideally have less padding)
-  // For backward compatibility, let's assume wrappers add EXTRA padding or override.
-  // Actually, to make "Tinggi/Rendah" work, we apply this to the container.
+  // Padding class applied to the container or inner wrapper
   const paddingClass = block.padding || 'py-0';
 
-  // Mobile always full width, desktop respects the setting
+  // Mobile is w-full, Tablet/Desktop follows the setting. 
+  // Using simple flex behavior: flex-grow-0 ensures it respects the width.
   const containerClass = isPreview 
     ? `relative ${widthClass === 'w-full' ? 'w-full' : 'w-full md:' + widthClass} ${paddingClass}`
-    : `relative group transition-all duration-200 mb-0 p-1 ${widthClass === 'w-full' ? 'w-full' : 'w-full md:' + widthClass} ${paddingClass}`;
+    : `relative group transition-all duration-200 mb-0 p-1 flex-shrink-0 ${widthClass === 'w-full' ? 'w-full' : 'w-full md:' + widthClass} ${paddingClass}`;
 
   // Allow overflow for navbar to let dropdowns show
   const allowOverflow = block.type === 'navbar';
@@ -78,14 +76,52 @@ export const BlockWrapper: React.FC<BlockWrapperProps> = ({
         onClick();
       }}
     >
-      <div className={`h-full border-2 rounded-lg transition-all relative bg-white ${isSelected ? 'border-primary ring-2 ring-primary/20 z-20 shadow-lg' : 'border-transparent hover:border-dashed hover:border-gray-300'}`}>
+      <div className={`h-full border-2 rounded-xl transition-all relative bg-white flex flex-col ${isSelected ? 'border-primary ring-2 ring-primary/20 z-30 shadow-2xl' : 'border-transparent hover:border-dashed hover:border-gray-300'}`}>
         
-        {/* Controls Overlay */}
-        <div className={`absolute -top-3 right-2 z-[50] flex flex-col items-end gap-1 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`}>
-          
-          <div className="bg-white shadow-xl rounded-full p-1.5 flex items-center gap-1 border border-gray-200 ring-1 ring-black/5" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
-            <span className="text-[10px] font-bold px-2 text-primary uppercase tracking-wider select-none max-w-[80px] truncate">{block.type}</span>
-            <div className="h-3 w-px bg-gray-300 mx-1"></div>
+        {/* --- TOP RIGHT: SETUP WIDGET (Width & Height) --- */}
+        {isSelected && (
+          <div className="absolute -top-3 right-4 z-[50] flex gap-2 animate-in fade-in slide-in-from-bottom-1">
+             {/* Width Controls */}
+             <div className="bg-gray-900 text-white shadow-xl rounded-lg p-1 flex items-center gap-1 border border-gray-700" onClick={(e) => e.stopPropagation()}>
+                <span className="text-[9px] font-bold text-gray-400 px-1"><Icons.Columns size={10}/></span>
+                {widthOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => onUpdateWidth(block.id, opt.value)}
+                    className={`px-1.5 py-1 text-[9px] font-bold rounded ${block.width === opt.value || (!block.width && opt.value === 'w-full') ? 'bg-primary text-white' : 'text-gray-400 hover:bg-gray-800'}`}
+                    title={`Lebar: ${opt.label}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+             </div>
+             {/* Height/Padding Controls */}
+             <div className="bg-gray-900 text-white shadow-xl rounded-lg p-1 flex items-center gap-1 border border-gray-700" onClick={(e) => e.stopPropagation()}>
+                <span className="text-[9px] font-bold text-gray-400 px-1"><Icons.ChevronsUp size={10}/></span>
+                {paddingOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => onUpdatePadding(block.id, opt.value)}
+                    className={`px-1.5 py-1 text-[9px] font-bold rounded ${block.padding === opt.value ? 'bg-primary text-white' : 'text-gray-400 hover:bg-gray-800'}`}
+                    title={`Tinggi (Padding): ${opt.label}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+             </div>
+          </div>
+        )}
+        
+        {/* --- BLOCK CONTENT --- */}
+        <div className={`relative z-0 h-full rounded-lg ${allowOverflow ? '' : 'overflow-hidden'}`}>
+          {children}
+        </div>
+
+        {/* --- BOTTOM CENTER: LINK PAUTAN (Move/Delete) --- */}
+        {/* Always visible on hover or selected */}
+        <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 z-[50] transition-opacity duration-200 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+          <div className="bg-white shadow-xl rounded-full px-1.5 py-1 flex items-center gap-1 border border-gray-200 ring-1 ring-black/5" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+            <span className="text-[10px] font-bold px-2 text-primary uppercase tracking-wider select-none max-w-[80px] truncate border-r border-gray-200 mr-1">{block.type}</span>
             
             <button 
               type="button"
@@ -123,47 +159,8 @@ export const BlockWrapper: React.FC<BlockWrapperProps> = ({
               <Icons.Trash2 size={14} />
             </button>
           </div>
-
-          {/* Width & Padding Controls (Only show if selected) */}
-          {isSelected && (
-             <div className="flex flex-col gap-1 items-end animate-in fade-in slide-in-from-top-1">
-                {/* Width */}
-                <div className="bg-white shadow-xl rounded-lg p-1 flex items-center gap-1 border border-gray-200 ring-1 ring-black/5" onClick={(e) => e.stopPropagation()}>
-                    <span className="text-[9px] font-bold text-gray-400 px-1"><Icons.Columns size={10}/></span>
-                    {widthOptions.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => onUpdateWidth(block.id, opt.value)}
-                        className={`px-1.5 py-1 text-[9px] font-bold rounded ${block.width === opt.value || (!block.width && opt.value === 'w-full') ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-                        title={`Lebar: ${opt.label}`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                </div>
-                {/* Height/Padding */}
-                <div className="bg-white shadow-xl rounded-lg p-1 flex items-center gap-1 border border-gray-200 ring-1 ring-black/5" onClick={(e) => e.stopPropagation()}>
-                    <span className="text-[9px] font-bold text-gray-400 px-1"><Icons.ChevronsUp size={10}/></span>
-                    {paddingOptions.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => onUpdatePadding(block.id, opt.value)}
-                        className={`px-1.5 py-1 text-[9px] font-bold rounded ${block.padding === opt.value ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-                        title={`Tinggi: ${opt.label}`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                </div>
-             </div>
-          )}
-
         </div>
-        
-        {/* Block Content */}
-        <div className={`relative z-0 h-full rounded-lg ${allowOverflow ? '' : 'overflow-hidden'}`}>
-          {children}
-        </div>
+
       </div>
     </div>
   );
