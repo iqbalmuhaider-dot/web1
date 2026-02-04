@@ -1,11 +1,13 @@
-export type BlockType = 'hero' | 'feature' | 'content' | 'gallery' | 'contact' | 'footer' | 'html' | 'drive' | 'video' | 'image' | 'ticker' | 'orgChart' | 'stats' | 'time' | 'visitor' | 'speech' | 'calendar' | 'downloads' | 'faq' | 'cta' | 'countdown' | 'notice' | 'table' | 'staffGrid' | 'testimonial' | 'linkList' | 'news' | 'definition' | 'divider' | 'spacer' | 'title' | 'navbar' | 'history';
+export type BlockType = 'hero' | 'feature' | 'content' | 'gallery' | 'contact' | 'footer' | 'html' | 'drive' | 'video' | 'image' | 'ticker' | 'orgChart' | 'stats' | 'time' | 'visitor' | 'speech' | 'calendar' | 'downloads' | 'faq' | 'cta' | 'countdown' | 'notice' | 'table' | 'staffGrid' | 'testimonial' | 'linkList' | 'news' | 'definition' | 'divider' | 'spacer' | 'title' | 'navbar' | 'history' | 'audio';
 
 export type BlockWidth = 'w-full' | 'w-3/4' | 'w-2/3' | 'w-1/2' | 'w-1/3' | 'w-1/4';
+export type BlockPadding = 'py-0' | 'py-4' | 'py-8' | 'py-12' | 'py-16' | 'py-20' | 'py-24' | 'py-32';
 
 export interface BaseBlock {
   id: string;
   type: BlockType;
-  width?: BlockWidth; // New: Allow resizing width
+  width?: BlockWidth;
+  padding?: BlockPadding; // New: Vertical padding control
 }
 
 export interface HeroBlock extends BaseBlock {
@@ -18,7 +20,7 @@ export interface HeroBlock extends BaseBlock {
     buttonLink?: string;
     fontSize?: 'sm' | 'md' | 'lg' | 'xl';
     overlayOpacity?: number;
-    height?: number; // New: Allow adjusting height
+    height?: number;
   };
 }
 
@@ -45,6 +47,16 @@ export interface HistoryBlock extends BaseBlock {
   data: {
     title: string;
     body: string;
+  };
+}
+
+// New Audio Block
+export interface AudioBlock extends BaseBlock {
+  type: 'audio';
+  data: {
+    title: string;
+    audioUrl: string;
+    autoPlay: boolean;
   };
 }
 
@@ -206,6 +218,7 @@ export interface SpeechBlock extends BaseBlock {
     authorRole: string;
     fontSize?: 'sm' | 'md' | 'lg' | 'xl';
     alignment?: 'left' | 'center' | 'justify';
+    imageSize?: 'small' | 'medium' | 'large' | 'full'; // New Image Size
   };
 }
 
@@ -405,7 +418,8 @@ export type SectionBlock =
   | SpacerBlock
   | TitleBlock
   | NavbarBlock
-  | HistoryBlock;
+  | HistoryBlock
+  | AudioBlock;
 
 export interface Page {
   id: string;

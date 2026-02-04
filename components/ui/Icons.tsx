@@ -9,7 +9,7 @@ import {
   UserPlus, FileText, HelpCircle, Megaphone, Timer, StickyNote,
   Table, Grid, List, Download, Quote, Newspaper, Tag, Flag,
   Settings, AlertTriangle, Info, AlignLeft, AlignCenter, AlignJustify,
-  ExternalLink, ChevronDown, Columns, AlignRight
+  ExternalLink, ChevronDown, Columns, AlignRight, Music, ChevronsUp, ChevronsDown
 } from 'lucide-react';
 
 export const Icons = {
@@ -74,7 +74,10 @@ export const Icons = {
   ExternalLink,
   ChevronDown,
   Columns,
-  AlignRight
+  AlignRight,
+  Music,
+  ChevronsUp,
+  ChevronsDown
 };
 
 export const iconList = Object.keys(Icons);

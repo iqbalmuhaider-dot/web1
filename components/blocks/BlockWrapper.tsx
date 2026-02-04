@@ -1,5 +1,5 @@
 import React from 'react';
-import { SectionBlock, BlockWidth } from '../../types';
+import { SectionBlock, BlockWidth, BlockPadding } from '../../types';
 import { Icons } from '../ui/Icons';
 
 interface BlockWrapperProps {
@@ -10,19 +10,28 @@ interface BlockWrapperProps {
   onMoveDown: (index: number) => void;
   onDelete: (id: string) => void;
   onUpdateWidth: (id: string, width: BlockWidth) => void;
+  onUpdatePadding: (id: string, padding: BlockPadding) => void;
   children: React.ReactNode;
   isPreview: boolean;
   isSelected: boolean;
   onClick: () => void;
 }
 
-const widthOptions: { label: string, value: BlockWidth, icon: any }[] = [
-  { label: '25%', value: 'w-1/4', icon: Icons.Columns },
-  { label: '33%', value: 'w-1/3', icon: Icons.Columns },
-  { label: '50%', value: 'w-1/2', icon: Icons.Columns },
-  { label: '66%', value: 'w-2/3', icon: Icons.Columns },
-  { label: '75%', value: 'w-3/4', icon: Icons.Columns },
-  { label: '100%', value: 'w-full', icon: Icons.Layout },
+const widthOptions: { label: string, value: BlockWidth }[] = [
+  { label: '25%', value: 'w-1/4' },
+  { label: '33%', value: 'w-1/3' },
+  { label: '50%', value: 'w-1/2' },
+  { label: '66%', value: 'w-2/3' },
+  { label: '75%', value: 'w-3/4' },
+  { label: '100%', value: 'w-full' },
+];
+
+const paddingOptions: { label: string, value: BlockPadding }[] = [
+  { label: '0px', value: 'py-0' },
+  { label: 'S', value: 'py-4' },
+  { label: 'M', value: 'py-12' },
+  { label: 'L', value: 'py-20' },
+  { label: 'XL', value: 'py-32' },
 ];
 
 export const BlockWrapper: React.FC<BlockWrapperProps> = ({
@@ -33,6 +42,7 @@ export const BlockWrapper: React.FC<BlockWrapperProps> = ({
   onMoveDown,
   onDelete,
   onUpdateWidth,
+  onUpdatePadding,
   children,
   isPreview,
   isSelected,
@@ -41,11 +51,17 @@ export const BlockWrapper: React.FC<BlockWrapperProps> = ({
   // Map internal width values to Tailwind classes
   // Default to w-full if undefined
   const widthClass = block.width || 'w-full';
+  
+  // Padding class, default to py-0 (inner renderers usually handle default padding, 
+  // but if we use Wrapper for padding, renderers should ideally have less padding)
+  // For backward compatibility, let's assume wrappers add EXTRA padding or override.
+  // Actually, to make "Tinggi/Rendah" work, we apply this to the container.
+  const paddingClass = block.padding || 'py-0';
 
   // Mobile always full width, desktop respects the setting
   const containerClass = isPreview 
-    ? `relative ${widthClass === 'w-full' ? 'w-full' : 'w-full md:' + widthClass}`
-    : `relative group transition-all duration-200 mb-0 p-1 ${widthClass === 'w-full' ? 'w-full' : 'w-full md:' + widthClass}`;
+    ? `relative ${widthClass === 'w-full' ? 'w-full' : 'w-full md:' + widthClass} ${paddingClass}`
+    : `relative group transition-all duration-200 mb-0 p-1 ${widthClass === 'w-full' ? 'w-full' : 'w-full md:' + widthClass} ${paddingClass}`;
 
   // Allow overflow for navbar to let dropdowns show
   const allowOverflow = block.type === 'navbar';
@@ -108,19 +124,37 @@ export const BlockWrapper: React.FC<BlockWrapperProps> = ({
             </button>
           </div>
 
-          {/* Width Controls (Only show if selected to reduce clutter) */}
+          {/* Width & Padding Controls (Only show if selected) */}
           {isSelected && (
-             <div className="bg-white shadow-xl rounded-lg p-1 flex items-center gap-1 border border-gray-200 ring-1 ring-black/5 animate-in fade-in slide-in-from-top-1" onClick={(e) => e.stopPropagation()}>
-                {widthOptions.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => onUpdateWidth(block.id, opt.value)}
-                    className={`px-2 py-1 text-[10px] font-bold rounded ${block.width === opt.value || (!block.width && opt.value === 'w-full') ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-                    title={`Lebar: ${opt.label}`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+             <div className="flex flex-col gap-1 items-end animate-in fade-in slide-in-from-top-1">
+                {/* Width */}
+                <div className="bg-white shadow-xl rounded-lg p-1 flex items-center gap-1 border border-gray-200 ring-1 ring-black/5" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[9px] font-bold text-gray-400 px-1"><Icons.Columns size={10}/></span>
+                    {widthOptions.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => onUpdateWidth(block.id, opt.value)}
+                        className={`px-1.5 py-1 text-[9px] font-bold rounded ${block.width === opt.value || (!block.width && opt.value === 'w-full') ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                        title={`Lebar: ${opt.label}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                </div>
+                {/* Height/Padding */}
+                <div className="bg-white shadow-xl rounded-lg p-1 flex items-center gap-1 border border-gray-200 ring-1 ring-black/5" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[9px] font-bold text-gray-400 px-1"><Icons.ChevronsUp size={10}/></span>
+                    {paddingOptions.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => onUpdatePadding(block.id, opt.value)}
+                        className={`px-1.5 py-1 text-[9px] font-bold rounded ${block.padding === opt.value ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                        title={`Tinggi: ${opt.label}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                </div>
              </div>
           )}
 

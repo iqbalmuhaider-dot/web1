@@ -103,6 +103,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddBlock, pages, activePageI
     { type: 'hero', icon: 'Layout', label: 'Hero Banner', desc: 'Gambar utama & tajuk' },
     { type: 'navbar', icon: 'AlignJustify', label: 'Menu Navigasi', desc: 'Bar menu pautan' },
     { type: 'history', icon: 'Book', label: 'Sejarah', desc: 'Teks Sejarah Sekolah' },
+    { type: 'audio', icon: 'Music', label: 'Muzik / Audio', desc: 'Pemain Lagu MP3' },
     { type: 'ticker', icon: 'Activity', label: 'Info Ticker', desc: 'Teks bergerak' },
     { type: 'content', icon: 'Type', label: 'Teks & Artikel', desc: 'Perenggan maklumat' },
     { type: 'image', icon: 'Image', label: 'Gambar', desc: 'Satu gambar besar' },

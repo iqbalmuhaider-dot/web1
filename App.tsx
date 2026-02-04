@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { WebsiteData, SectionBlock, BlockType, Page, BlockWidth } from './types';
+import { WebsiteData, SectionBlock, BlockType, Page, BlockWidth, BlockPadding } from './types';
 import { INITIAL_DATA } from './constants';
 import { Sidebar } from './components/editor/Sidebar';
 import { BlockRenderer } from './components/blocks/Renderer';
@@ -238,6 +238,7 @@ export default function App() {
        title: { type: 'title', data: { text: "Tajuk Seksyen", alignment: 'center', fontSize: '2xl' }, width: 'w-full' },
        navbar: { type: 'navbar', data: { style: 'light', alignment: 'center' }, width: 'w-full' },
        history: { type: 'history', data: { title: "Sejarah Sekolah", body: "Ditubuhkan pada tahun..." }, width: 'w-full' },
+       audio: { type: 'audio', data: { title: "Lagu Sekolah", audioUrl: "", autoPlay: false }, width: 'w-full' },
        feature: { type: 'feature', data: { title: "Ciri-Ciri", features: [{ title: "Ciri 1", description: "Deskripsi", icon: "Star" }], fontSize: 'md' }, width: 'w-full' },
        content: { type: 'content', data: { title: "Tajuk", body: "Kandungan teks...", alignment: "left", fontSize: 'md' }, width: 'w-full' },
        gallery: { type: 'gallery', data: { title: "Galeri", images: ["https://picsum.photos/400"] }, width: 'w-full' },
@@ -282,6 +283,16 @@ export default function App() {
       pages: updatePageRecursive(prev.pages, activePageId, (page) => ({
         ...page,
         sections: page.sections.map(s => s.id === id ? { ...s, width } : s)
+      }))
+    }));
+  };
+
+  const updateBlockPadding = (id: string, padding: BlockPadding) => {
+    setData(prev => ({
+      ...prev,
+      pages: updatePageRecursive(prev.pages, activePageId, (page) => ({
+        ...page,
+        sections: page.sections.map(s => s.id === id ? { ...s, padding } : s)
       }))
     }));
   };
@@ -461,6 +472,7 @@ export default function App() {
                         onMoveDown={(idx) => moveBlock(idx, 'down')} 
                         onDelete={deleteBlock} 
                         onUpdateWidth={updateBlockWidth}
+                        onUpdatePadding={updateBlockPadding}
                         isPreview={isPreview || !user} 
                         isSelected={selectedBlockId === block.id} 
                         onClick={() => setSelectedBlockId(block.id)}
