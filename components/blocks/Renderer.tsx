@@ -72,7 +72,7 @@ export const HeroRenderer: React.FC<{ block: HeroBlock } & RendererProps> = ({ b
       {!isPreview && (
         <div className="absolute top-4 right-4 z-30 flex flex-col gap-2 items-end">
            <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100 flex items-center gap-2">
-              <span className="text-[10px] font-bold text-gray-500 uppercase">Overlay</span>
+              <span className="text-[10px] font-bold text-gray-500 uppercase">Gelap/Cerah</span>
               <input 
                 type="range" 
                 min="0" 
@@ -379,17 +379,7 @@ export const GalleryRenderer: React.FC<{ block: GalleryBlock } & RendererProps> 
 }
 
 export const ContactRenderer: React.FC<{ block: ContactBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
-  const getMapSrc = (input: string) => {
-    if (!input) return '';
-    // Extract src from iframe tag
-    const srcMatch = input.match(/src="([^"]+)"/);
-    if (srcMatch && srcMatch[1]) return srcMatch[1];
-    // Allow raw URLs (assuming they are embeddable)
-    if (input.trim().startsWith('http')) return input;
-    return '';
-  };
-
-  const mapSrc = getMapSrc(block.data.mapUrl);
+  const isIframeCode = block.data.mapUrl && block.data.mapUrl.includes('<iframe');
 
   return (
     <div className="py-16 px-4 bg-gray-900 text-white">
@@ -422,14 +412,25 @@ export const ContactRenderer: React.FC<{ block: ContactBlock } & RendererProps> 
           </div>
         </div>
         <div className="h-[400px] bg-gray-800 rounded-2xl overflow-hidden relative group">
-           {mapSrc ? (
-             <iframe src={mapSrc} className="w-full h-full border-0" allowFullScreen loading="lazy"></iframe>
+           {isIframeCode ? (
+             <div 
+               className="w-full h-full [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
+               dangerouslySetInnerHTML={{ __html: block.data.mapUrl }} 
+             />
+           ) : block.data.mapUrl ? (
+             <iframe src={block.data.mapUrl} className="w-full h-full border-0" allowFullScreen loading="lazy"></iframe>
            ) : (
              <div className="w-full h-full flex items-center justify-center text-gray-500">Tiada Peta</div>
            )}
+
            {!isPreview && (
-             <div className="absolute top-4 right-4 w-64">
-               <input value={block.data.mapUrl} onChange={e => onUpdate(block.id, {...block.data, mapUrl: e.target.value})} className="w-full bg-white text-black p-2 rounded text-xs shadow" placeholder="Google Maps Embed URL" />
+             <div className="absolute top-4 right-4 w-full max-w-sm">
+               <textarea 
+                 value={block.data.mapUrl} 
+                 onChange={e => onUpdate(block.id, {...block.data, mapUrl: e.target.value})} 
+                 className="w-full bg-white text-black p-2 rounded-lg text-xs shadow-lg h-24 font-mono opacity-20 group-hover:opacity-100 transition-opacity focus:opacity-100" 
+                 placeholder="Paste Google Maps Embed HTML Code (<iframe...>)" 
+               />
              </div>
            )}
         </div>
