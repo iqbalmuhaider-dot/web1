@@ -8,7 +8,8 @@ import {
   LogIn, Activity, BarChart, Link, MessageSquare, Briefcase,
   UserPlus, FileText, HelpCircle, Megaphone, Timer, StickyNote,
   Table, Grid, List, Download, Quote, Newspaper, Tag, Flag,
-  Settings, AlertTriangle, Info
+  Settings, AlertTriangle, Info, AlignLeft, AlignCenter, AlignJustify,
+  ExternalLink, ChevronDown
 } from 'lucide-react';
 
 export const Icons = {
@@ -66,7 +67,12 @@ export const Icons = {
   Flag,
   Settings,
   AlertTriangle,
-  Info
+  Info,
+  AlignLeft,
+  AlignCenter,
+  AlignJustify,
+  ExternalLink,
+  ChevronDown
 };
 
 export const iconList = Object.keys(Icons);

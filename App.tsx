@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { WebsiteData, SectionBlock, BlockType, Page } from './types';
 import { INITIAL_DATA } from './constants';
@@ -111,32 +111,84 @@ const NavItem: React.FC<NavItemProps> = ({ page, depth = 0, activePageId, onSwit
   const hasChildren = page.subPages && page.subPages.length > 0;
   const isActive = activePageId === page.id;
   const isChildActive = isParentOf(page, activePageId);
-  const containerClasses = depth === 0 ? "top-full left-0 pt-2" : "top-0 left-full pl-2";
+  
+  // State for click-toggle behavior
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleMainClick = (e: React.MouseEvent) => {
+    if (hasChildren) {
+      // Toggle dropdown only
+      setIsOpen(!isOpen);
+    } else {
+      // Navigate
+      onSwitchPage(page.id);
+      setIsOpen(false);
+    }
+  };
+
+  const handleSubPageClick = (id: string) => {
+    onSwitchPage(id);
+    setIsOpen(false);
+  };
 
   return (
-    <div className="relative group shrink-0">
+    <div className="relative shrink-0" ref={containerRef}>
       <button 
-         onClick={() => onSwitchPage(page.id)}
-         className={`flex items-center gap-1 px-4 py-2 rounded-full transition-all duration-200 border border-transparent whitespace-nowrap ${
-           isActive ? 'bg-primary text-white shadow-md' : isChildActive ? 'text-primary bg-blue-50 border-blue-100' : 'text-gray-600 hover:text-primary hover:bg-gray-50'
+         onClick={handleMainClick}
+         className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all duration-300 border border-transparent whitespace-nowrap select-none ${
+           isActive || (isOpen && hasChildren)
+             ? 'bg-primary text-white shadow-lg shadow-primary/30 transform scale-105' 
+             : isChildActive 
+               ? 'text-primary bg-blue-50 border-blue-100 font-semibold' 
+               : 'text-gray-600 hover:text-primary hover:bg-gray-50'
          }`}
       >
         <span className="font-medium text-sm">{page.name}</span>
-        {hasChildren && <Icons.ArrowDown size={12} className={`transition-transform duration-200 ${depth > 0 ? '-rotate-90 group-hover:rotate-0' : 'group-hover:rotate-180'} ${isActive ? 'text-white' : ''}`} />}
+        {hasChildren && (
+          <Icons.ChevronDown 
+            size={14} 
+            className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'}`} 
+            style={{ opacity: 0.8 }} 
+          />
+        )}
       </button>
 
-      {hasChildren && (
-         <div className={`absolute ${containerClasses} hidden group-hover:block z-50 animate-in fade-in duration-150`}>
-           <div className="w-56 bg-white shadow-xl rounded-xl border border-gray-100 py-2">
+      {/* Modern Dropdown Panel */}
+      {hasChildren && isOpen && (
+         <div className="absolute top-full left-0 mt-3 w-72 bg-white shadow-2xl rounded-2xl border border-gray-100 p-2 z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
+           {/* Decorative Arrow Tip */}
+           <div className="absolute -top-1.5 left-8 w-3 h-3 bg-white border-t border-l border-gray-100 transform rotate-45"></div>
+           
+           <div className="flex flex-col gap-1 relative bg-white rounded-xl overflow-hidden">
+              <div className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 mb-1">
+                Sub-Halaman
+              </div>
+              
               {page.subPages!.map(sub => (
-                <div key={sub.id} className="relative px-2">
-                  <NavItem 
-                    page={sub} 
-                    depth={depth + 1} 
-                    activePageId={activePageId} 
-                    onSwitchPage={onSwitchPage} 
-                  />
-                </div>
+                <button 
+                  key={sub.id}
+                  onClick={(e) => { e.stopPropagation(); handleSubPageClick(sub.id); }}
+                  className={`text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3 group ${
+                    activePageId === sub.id 
+                      ? 'bg-blue-50 text-primary' 
+                      : 'hover:bg-gray-50 text-gray-700 hover:pl-5'
+                  }`}
+                >
+                  <div className={`w-1.5 h-1.5 rounded-full transition-colors ${activePageId === sub.id ? 'bg-primary' : 'bg-gray-300 group-hover:bg-primary/50'}`}></div>
+                  <span className="truncate">{sub.name}</span>
+                </button>
               ))}
            </div>
          </div>
@@ -200,6 +252,7 @@ export default function App() {
   }, []);
 
   const activePage = findPageRecursive(data.pages, activePageId) || data.pages[0];
+  const hasSubPages = activePage.subPages && activePage.subPages.length > 0;
 
   const handleSave = async () => {
     if (!user) return;
@@ -238,6 +291,12 @@ export default function App() {
   };
 
   const addBlock = (type: BlockType) => {
+    // Prevent adding blocks to a parent directory page
+    if (hasSubPages) {
+      alert("Halaman ini adalah direktori (mengandungi sub-halaman). Sila pilih atau cipta sub-halaman untuk menambah widget.");
+      return;
+    }
+
     const id = uuidv4();
     const defaults: any = {
        hero: { type: 'hero', data: { title: "Tajuk Baru", subtitle: "Subtajuk deskripsi", bgImage: "https://picsum.photos/1920/1080", buttonText: "Klik", fontSize: 'md' } },
@@ -337,6 +396,8 @@ export default function App() {
       const newPages = parentId ? addSubPageRecursive(prev.pages, parentId, newPage) : [...prev.pages, newPage];
       return { ...prev, pages: newPages };
     });
+    // If adding a sub-page, we stay on parent to show the new folder structure, or switch?
+    // Let's switch to the new page to allow immediate editing.
     setActivePageId(newPageId);
   };
 
@@ -452,28 +513,62 @@ export default function App() {
                  </div>
                )}
 
-               <div className={`flex-1 w-full ${(isPreview || !user) ? '' : 'pb-32'}`}>
-                 {activePage.sections.map((block, index) => (
-                   <BlockWrapper 
-                      key={block.id} 
-                      block={block} 
-                      index={index} 
-                      total={activePage.sections.length} 
-                      onMoveUp={(idx) => moveBlock(idx, 'up')} 
-                      onMoveDown={(idx) => moveBlock(idx, 'down')} 
-                      onDelete={deleteBlock} 
-                      isPreview={isPreview || !user} 
-                      isSelected={selectedBlockId === block.id} 
-                      onClick={() => setSelectedBlockId(block.id)}
-                    >
-                     <BlockRenderer 
+               {hasSubPages ? (
+                 <div className="flex-1 w-full flex flex-col items-center justify-center min-h-[50vh] p-8">
+                   <div className="max-w-5xl w-full">
+                     <div className="text-center mb-12">
+                       <h1 className="text-4xl font-bold text-gray-800 mb-3">{activePage.name}</h1>
+                       <div className="h-1.5 w-24 bg-secondary mx-auto rounded-full"></div>
+                     </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                       {activePage.subPages!.map(sub => (
+                         <button 
+                           key={sub.id}
+                           onClick={() => setActivePageId(sub.id)}
+                           className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-primary/30 hover:-translate-y-1 transition-all group flex flex-col items-center gap-4 text-center"
+                         >
+                           <div className="w-20 h-20 bg-blue-50 text-primary rounded-full flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                             <Icons.FileText size={32} />
+                           </div>
+                           <div>
+                             <h3 className="font-bold text-lg text-gray-800 group-hover:text-primary transition-colors">{sub.name}</h3>
+                             <span className="text-xs text-gray-400 font-mono mt-1 block">Klik untuk melihat</span>
+                           </div>
+                         </button>
+                       ))}
+                     </div>
+                   </div>
+                 </div>
+               ) : (
+                 <div className={`flex-1 w-full ${(isPreview || !user) ? '' : 'pb-32'}`}>
+                   {activePage.sections.map((block, index) => (
+                     <BlockWrapper 
+                        key={block.id} 
                         block={block} 
+                        index={index} 
+                        total={activePage.sections.length} 
+                        onMoveUp={(idx) => moveBlock(idx, 'up')} 
+                        onMoveDown={(idx) => moveBlock(idx, 'down')} 
+                        onDelete={deleteBlock} 
                         isPreview={isPreview || !user} 
-                        onUpdate={updateBlock} 
-                      />
-                   </BlockWrapper>
-                 ))}
-               </div>
+                        isSelected={selectedBlockId === block.id} 
+                        onClick={() => setSelectedBlockId(block.id)}
+                      >
+                       <BlockRenderer 
+                          block={block} 
+                          isPreview={isPreview || !user} 
+                          onUpdate={updateBlock} 
+                        />
+                     </BlockWrapper>
+                   ))}
+                   {!isPreview && user && activePage.sections.length === 0 && (
+                     <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                        <Icons.Layout size={48} className="mb-4 opacity-20" />
+                        <p>Halaman ini kosong. Pilih widget di sebelah kiri untuk bermula.</p>
+                     </div>
+                   )}
+                 </div>
+               )}
              </div>
           </div>
         </main>

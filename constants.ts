@@ -1,4 +1,5 @@
 import { WebsiteData } from './types';
+import { v4 as uuidv4 } from 'uuid';
 
 export const INITIAL_DATA: WebsiteData = {
   title: "SK Masjid Tanah",
@@ -34,9 +35,9 @@ export const INITIAL_DATA: WebsiteData = {
           data: {
             title: "BERITA & PENGUMUMAN",
             items: [
-              { id: '1', title: "Gotong Royong Perdana 2024", date: "2024-03-25", tag: "HEM", content: "Program gotong royong akan diadakan pada hari Sabtu melibatkan semua guru dan PIBG." },
-              { id: '2', title: "Kejohanan Sukan Tahunan", date: "2024-04-10", tag: "KOK", content: "Latihan rumah sukan bermula minggu hadapan. Sila bawa pakaian sukan lengkap." },
-              { id: '3', title: "Ujian Pentaksiran 1", date: "2024-05-02", tag: "KUR", content: "Jadual waktu ujian telah diedarkan kepada semua murid tahun 4, 5 dan 6." }
+              { id: '1', title: "Gotong Royong Perdana 2024", date: "2024-03-25", tag: "HAL EHWAL MURID", content: "Program gotong royong akan diadakan pada hari Sabtu melibatkan semua guru dan PIBG.", link: "" },
+              { id: '2', title: "Kejohanan Sukan Tahunan", date: "2024-04-10", tag: "KOKURIKULUM", content: "Latihan rumah sukan bermula minggu hadapan. Sila bawa pakaian sukan lengkap.", link: "" },
+              { id: '3', title: "Ujian Pentaksiran 1", date: "2024-05-02", tag: "KURIKULUM", content: "Jadual waktu ujian telah diedarkan kepada semua murid tahun 4, 5 dan 6.", link: "" }
             ]
           }
         },
@@ -44,48 +45,6 @@ export const INITIAL_DATA: WebsiteData = {
           id: 'divider-1',
           type: 'divider',
           data: { style: 'solid', color: '#e5e7eb', thickness: 2 }
-        },
-        {
-          id: 'history',
-          type: 'content',
-          data: {
-            title: "SEJARAH KAMI",
-            body: "Sekolah Kebangsaan Masjid Tanah (SKMT) telah ditubuhkan pada tahun 1950-an dan merupakan salah satu institusi pendidikan tertua di daerah Alor Gajah. \n\nBermula dengan sebuah bangunan kayu yang sederhana yang menempatkan 50 orang murid, sekolah ini kini telah berkembang pesat dengan prasarana moden termasuk makmal komputer, pusat sumber, dan dewan terbuka. Sepanjang sejarahnya, SKMT telah melahirkan ramai tokoh pemimpin dan profesional yang menyumbang kepada pembangunan negara.",
-            alignment: "center",
-            fontSize: 'md'
-          }
-        },
-        {
-          id: 'spacer-1',
-          type: 'spacer',
-          data: { height: 50 }
-        },
-        {
-          id: 'logo-school',
-          type: 'definition',
-          data: {
-            title: "MAKSUD LOGO SEKOLAH",
-            imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Coat_of_arms_of_Malaysia.svg/1200px-Coat_of_arms_of_Malaysia.svg.png", // Placeholder
-            items: [
-              { term: "Obor", definition: "Melambangkan semangat perjuangan ilmu yang tidak pernah padam." },
-              { term: "Buku", definition: "Sumber ilmu pengetahuan yang menjadi teras pendidikan." },
-              { term: "Warna Biru", definition: "Perpaduan dan keharmonian warga sekolah." },
-              { term: "Warna Kuning", definition: "Kesetiaan kepada Raja dan Negara." }
-            ]
-          }
-        },
-        {
-          id: 'flag-school',
-          type: 'definition',
-          data: {
-            title: "BENDERA SEKOLAH",
-            imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Flag_of_Malaysia.svg/2560px-Flag_of_Malaysia.svg.png", // Placeholder
-            items: [
-              { term: "Jalur Merah", definition: "Keberanian menghadapi cabaran." },
-              { term: "Jalur Putih", definition: "Kesucian hati dan niat dalam menuntut ilmu." },
-              { term: "Lambang Sekolah", definition: "Identiti dan kebanggaan setiap warga SKMT." }
-            ]
-          }
         },
         {
           id: 'links-1',
@@ -137,6 +96,135 @@ export const INITIAL_DATA: WebsiteData = {
           data: {
             copyright: "© 2024 SK MASJID TANAH. HAK CIPTA TERPELIHARA."
           }
+        }
+      ]
+    },
+    {
+      id: 'info',
+      name: 'Info Sekolah',
+      slug: 'info-sekolah',
+      sections: [],
+      isOpen: false,
+      subPages: [
+        {
+          id: 'sejarah',
+          name: 'Sejarah',
+          slug: 'sejarah',
+          sections: [
+            {
+               id: 'sejarah-content',
+               type: 'content',
+               data: {
+                 title: "Sejarah Sekolah",
+                 body: "Sekolah Kebangsaan Masjid Tanah (SKMT) telah ditubuhkan pada tahun 1950-an dan merupakan salah satu institusi pendidikan tertua di daerah Alor Gajah.\n\nBermula dengan sebuah bangunan kayu yang sederhana yang menempatkan 50 orang murid, sekolah ini kini telah berkembang pesat dengan prasarana moden termasuk makmal komputer, pusat sumber, dan dewan terbuka.",
+                 alignment: "left",
+                 fontSize: 'md'
+               }
+            }
+          ]
+        },
+        {
+          id: 'visi-misi',
+          name: 'Visi & Misi',
+          slug: 'visi-misi',
+          sections: [
+            {
+               id: 'vm-feature',
+               type: 'feature',
+               data: {
+                 title: "HALATUJU SEKOLAH",
+                 features: [
+                    { title: "Visi", description: "Pendidikan Berkualiti Insan Terdidik Negara Sejahtera", icon: "Eye" },
+                    { title: "Misi", description: "Melestarikan Sistem Pendidikan Yang Berkualiti Untuk Membangunkan Potensi Individu Bagi Memenuhi Aspirasi Negara", icon: "Trophy" },
+                    { title: "Moto", description: "Berilmu, Beramal, Berbakti", icon: "Star" }
+                 ],
+                 fontSize: 'md'
+               }
+            }
+          ]
+        },
+        {
+           id: 'logo',
+           name: 'Identiti',
+           slug: 'identiti',
+           sections: [
+             {
+               id: 'logo-def',
+               type: 'definition',
+               data: {
+                  title: "Lencana Sekolah",
+                  imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Coat_of_arms_of_Malaysia.svg/1200px-Coat_of_arms_of_Malaysia.svg.png",
+                  items: [
+                    { term: "Obor", definition: "Melambangkan semangat perjuangan ilmu yang tidak pernah padam." },
+                    { term: "Buku", definition: "Sumber ilmu pengetahuan yang menjadi teras pendidikan." }
+                  ]
+               }
+             }
+           ]
+        }
+      ]
+    },
+    {
+      id: 'unit',
+      name: 'Unit',
+      slug: 'unit',
+      sections: [], // Empty sections triggers directory grid view
+      isOpen: true,
+      subPages: [
+        {
+          id: 'pentadbiran',
+          name: 'Pentadbiran',
+          slug: 'pentadbiran',
+          sections: [
+             {
+               id: 'admin-chart',
+               type: 'orgChart',
+               data: {
+                 title: "CARTA ORGANISASI PENTADBIRAN",
+                 members: [
+                   { id: 'gb', name: 'Pn. Hjh Zaiton', position: 'GURU BESAR', imageUrl: 'https://picsum.photos/200' },
+                   { id: 'gpk1', name: 'En. Ahmad', position: 'GPK PENTADBIRAN', imageUrl: 'https://picsum.photos/201' },
+                   { id: 'gpkhem', name: 'Pn. Siti', position: 'GPK HEM', imageUrl: 'https://picsum.photos/202' },
+                   { id: 'gpkkoko', name: 'En. Razak', position: 'GPK KOKURIKULUM', imageUrl: 'https://picsum.photos/203' },
+                 ]
+               }
+             }
+          ]
+        },
+        {
+          id: 'kurikulum',
+          name: 'Kurikulum',
+          slug: 'kurikulum',
+          sections: [
+             { id: 'kuri-info', type: 'content', data: { title: "Unit Kurikulum", body: "Maklumat berkaitan panitia mata pelajaran dan program kecemerlangan akademik.", alignment: "left" } }
+          ]
+        },
+        {
+          id: 'hem',
+          name: 'Hal Ehwal Murid',
+          slug: 'hem',
+          sections: [
+            { id: 'hem-info', type: 'content', data: { title: "Unit HEM", body: "Disiplin, Pengawas, SPBT dan Kebajikan Murid.", alignment: "left" } }
+          ]
+        },
+        {
+          id: 'koku',
+          name: 'Kokurikulum',
+          slug: 'kokurikulum',
+          sections: [], // Empty to show sub-units if needed, or fill with content
+          subPages: [
+             { id: 'badan-uniform', name: 'Badan Beruniform', slug: 'uniform', sections: [{id: 'bu-content', type:'content', data:{title:'Badan Beruniform', body:'Pengakap, BSMM, TKRS...', alignment:'left'}}] },
+             { id: 'kelab', name: 'Kelab & Persatuan', slug: 'kelab', sections: [{id: 'kp-content', type:'content', data:{title:'Kelab & Persatuan', body:'Bahasa Melayu, Sains, Agama Islam...', alignment:'left'}}] },
+             { id: 'sukan', name: 'Sukan & Permainan', slug: 'sukan', sections: [{id: 'sp-content', type:'content', data:{title:'Sukan & Permainan', body:'Bola Sepak, Bola Jaring, Olahraga...', alignment:'left'}}] },
+          ]
+        },
+        {
+          id: 'ppki',
+          name: 'PPKI',
+          slug: 'ppki',
+          sections: [
+            { id: 'ppki-info', type: 'content', data: { title: "Pendidikan Khas (PPKI)", body: "Program Pendidikan Khas Integrasi SK Masjid Tanah.", alignment: "left" } }
+          ]
         }
       ]
     }

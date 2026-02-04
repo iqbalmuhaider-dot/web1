@@ -55,6 +55,15 @@ const getSizeClass = (size?: string, type: 'title' | 'body' = 'body') => {
   return map[size || 'md'][type];
 };
 
+// Helper for Date Formatting (d/m/yyyy)
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const [y, m, d] = parts;
+  return `${parseInt(d)}/${parseInt(m)}/${y}`; 
+};
+
 // --- RENDERERS ---
 
 export const HeroRenderer: React.FC<{ block: HeroBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
@@ -485,18 +494,60 @@ export const DriveRenderer: React.FC<{ block: DriveBlock } & RendererProps> = ({
 }
 
 export const VideoRenderer: React.FC<{ block: VideoBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
+  const getEmbedUrl = (url: string) => {
+    if (!url) return '';
+    // Already an embed URL?
+    if (url.includes('/embed/')) return url;
+    
+    let videoId = '';
+    
+    try {
+        // Handle standard youtube.com/watch?v=...
+        if (url.includes('v=')) {
+            // Split by v= and then take the first part before any ampersand
+            videoId = url.split('v=')[1].split('&')[0];
+        } 
+        // Handle short youtu.be/ID
+        else if (url.includes('youtu.be/')) {
+            videoId = url.split('youtu.be/')[1].split('?')[0];
+        }
+    } catch (e) {
+        console.error("Error parsing YouTube URL", e);
+    }
+    
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : '';
+  };
+
+  const embedUrl = getEmbedUrl(block.data.url);
+
   return (
     <div className="py-12 px-4 bg-black">
        <div className="max-w-4xl mx-auto">
           {!isPreview && <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="w-full bg-gray-900 text-white p-2 mb-4 rounded" placeholder="Video Title" />}
-          <div className="aspect-video bg-gray-800 rounded-xl overflow-hidden relative">
-             {block.data.url ? (
-               <iframe src={block.data.url.includes('embed') ? block.data.url : `https://www.youtube.com/embed/${block.data.url.split('v=')[1] || ''}`} className="w-full h-full" allowFullScreen></iframe>
+          <div className="aspect-video bg-gray-800 rounded-xl overflow-hidden relative shadow-2xl border border-gray-700">
+             {embedUrl ? (
+               <iframe 
+                 src={embedUrl} 
+                 className="w-full h-full" 
+                 title={block.data.title || "YouTube video player"}
+                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                 allowFullScreen
+                 frameBorder="0"
+               ></iframe>
              ) : (
-               <div className="w-full h-full flex items-center justify-center text-gray-500">Masukkan URL Video</div>
+               <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 gap-4">
+                  <Icons.Video size={48} className="opacity-50" />
+                  <p>Masukkan URL YouTube yang sah</p>
+               </div>
              )}
           </div>
-          {!isPreview && <input value={block.data.url} onChange={e => onUpdate(block.id, {...block.data, url: e.target.value})} className="w-full mt-4 bg-gray-900 text-white p-2 rounded" placeholder="YouTube URL" />}
+          {!isPreview && (
+             <div className="mt-4">
+               <label className="text-xs text-gray-400 font-bold ml-1 uppercase">URL YouTube</label>
+               <input value={block.data.url} onChange={e => onUpdate(block.id, {...block.data, url: e.target.value})} className="w-full mt-1 bg-gray-900 text-white p-2 rounded border border-gray-700 focus:border-primary outline-none" placeholder="https://www.youtube.com/watch?v=..." />
+               <p className="text-[10px] text-gray-500 mt-1 ml-1">Menyokong pautan biasa dan pautan 'youtu.be'.</p>
+             </div>
+          )}
        </div>
     </div>
   )
@@ -536,10 +587,22 @@ export const ImageRenderer: React.FC<{ block: ImageBlock } & RendererProps> = ({
 }
 
 export const TickerRenderer: React.FC<{ block: TickerBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
+  const [currentDate, setCurrentDate] = useState("");
+
+  useEffect(() => {
+    // Format date as dd/mm/yyyy
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    setCurrentDate(`${day}/${month}/${year}`);
+  }, []);
+
   return (
     <div className="bg-primary text-white overflow-hidden flex items-stretch h-10 shadow-md">
-       <div className="bg-secondary text-primary font-black px-4 flex items-center shrink-0 text-sm uppercase tracking-wider relative z-10">
+       <div className="bg-secondary text-primary font-black px-4 flex items-center shrink-0 text-sm uppercase tracking-wider relative z-10 gap-2">
          {isPreview ? block.data.label : <input value={block.data.label} onChange={e => onUpdate(block.id, {...block.data, label: e.target.value})} className="bg-transparent w-24 outline-none font-bold" />}
+         <span className="text-[10px] font-mono opacity-80 border-l border-primary/20 pl-2 hidden md:block">{currentDate}</span>
        </div>
        <div className="flex-1 flex items-center bg-primary overflow-hidden relative">
          {isPreview ? (
@@ -630,27 +693,54 @@ export const VisitorRenderer: React.FC<{ block: VisitorBlock } & RendererProps> 
 }
 
 export const SpeechRenderer: React.FC<{ block: SpeechBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
+  const alignment = block.data.alignment || 'left';
+  const alignClass = alignment === 'center' ? 'text-center' : alignment === 'justify' ? 'text-justify' : 'text-left';
+
   return (
-    <div className="py-16 px-4 bg-white">
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12 group">
+    <div className="py-16 px-4 bg-white relative group">
+       {!isPreview && (
+          <div className="absolute top-4 right-4 z-20 flex gap-2">
+             <div className="bg-white p-1 rounded-lg border border-gray-200 flex gap-1 shadow-sm">
+               <button 
+                 onClick={() => onUpdate(block.id, { ...block.data, alignment: 'left' })} 
+                 className={`p-1 rounded ${alignment === 'left' ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
+                 title="Align Left"
+               >
+                 <Icons.AlignLeft size={16} />
+               </button>
+               <button 
+                 onClick={() => onUpdate(block.id, { ...block.data, alignment: 'center' })} 
+                 className={`p-1 rounded ${alignment === 'center' ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
+                 title="Align Center"
+               >
+                 <Icons.AlignCenter size={16} />
+               </button>
+               <button 
+                 onClick={() => onUpdate(block.id, { ...block.data, alignment: 'justify' })} 
+                 className={`p-1 rounded ${alignment === 'justify' ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
+                 title="Justify"
+               >
+                 <Icons.AlignJustify size={16} />
+               </button>
+             </div>
+             <FontSizeControl value={block.data.fontSize} onChange={(v) => onUpdate(block.id, { ...block.data, fontSize: v })} />
+          </div>
+        )}
+
+      <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12">
         <div className="w-64 shrink-0 relative">
           <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl rotate-2 border-4 border-white">
             <img src={block.data.imageUrl} className="w-full h-full object-cover" alt="Author" />
           </div>
           {!isPreview && <div className="absolute inset-0 z-10 flex items-center justify-center"><ImageControl label="Foto" url={block.data.imageUrl} onChange={v => onUpdate(block.id, {...block.data, imageUrl: v})} /></div>}
         </div>
-        <div className="flex-1 text-center md:text-left relative">
-           {!isPreview && (
-              <div className="absolute top-0 right-0 z-20">
-                 <FontSizeControl value={block.data.fontSize} onChange={(v) => onUpdate(block.id, { ...block.data, fontSize: v })} />
-              </div>
-            )}
+        <div className="flex-1 text-center md:text-left relative w-full">
            {isPreview ? <h2 className="text-3xl font-bold mb-6 text-primary">{block.data.title}</h2> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="text-3xl font-bold mb-6 text-primary w-full border-b outline-none bg-transparent" />}
            
            {isPreview ? (
-             <div className={`${getSizeClass(block.data.fontSize, 'body')} text-gray-600 leading-loose italic whitespace-pre-wrap`}>"{block.data.text}"</div>
+             <div className={`${getSizeClass(block.data.fontSize, 'body')} text-gray-600 leading-loose italic whitespace-pre-wrap ${alignClass}`}>"{block.data.text}"</div>
            ) : (
-             <textarea value={block.data.text} onChange={e => onUpdate(block.id, {...block.data, text: e.target.value})} className="w-full h-48 p-4 bg-gray-50 rounded-xl border border-gray-200 outline-none resize-none" />
+             <textarea value={block.data.text} onChange={e => onUpdate(block.id, {...block.data, text: e.target.value})} className={`w-full h-48 p-4 bg-gray-50 rounded-xl border border-gray-200 outline-none resize-none ${alignClass}`} />
            )}
            
            <div className="mt-8">
@@ -1004,20 +1094,37 @@ export const NewsRenderer: React.FC<{ block: NewsBlock } & RendererProps> = ({ b
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {block.data.items.map((item, idx) => (
-          <div key={item.id} className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow relative group">
+          <div key={item.id} className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow relative group flex flex-col h-full">
              <div className="flex justify-between items-start mb-4">
-                {isPreview ? <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-1 rounded uppercase">{item.tag}</span> : <select value={item.tag} onChange={e => { const ni = [...block.data.items]; ni[idx].tag = e.target.value as any; onUpdate(block.id, {...block.data, items: ni}) }} className="text-xs border rounded"><option>KUR</option><option>HEM</option><option>KOK</option><option>PENT</option></select>}
-                {isPreview ? <span className="text-xs text-gray-400 font-mono">{item.date}</span> : <input type="date" value={item.date} onChange={e => { const ni = [...block.data.items]; ni[idx].date = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="text-xs border rounded" />}
+                {isPreview ? <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">{item.tag}</span> : <select value={item.tag} onChange={e => { const ni = [...block.data.items]; ni[idx].tag = e.target.value as any; onUpdate(block.id, {...block.data, items: ni}) }} className="text-xs border rounded w-32"><option>PENTADBIRAN</option><option>KURIKULUM</option><option>HAL EHWAL MURID</option><option>KOKURIKULUM</option><option>PPKI</option><option>KELAB KEBAJIKAN GURU DAN STAF</option></select>}
+                {isPreview ? <span className="text-xs text-gray-400 font-mono">{formatDate(item.date)}</span> : <input type="date" value={item.date} onChange={e => { const ni = [...block.data.items]; ni[idx].date = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="text-xs border rounded" />}
              </div>
-             {isPreview ? <h3 className="font-bold text-lg mb-2 text-gray-800 leading-snug">{item.title}</h3> : <textarea value={item.title} onChange={e => { const ni = [...block.data.items]; ni[idx].title = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="w-full font-bold text-lg border-b mb-2" rows={2} />}
              
-             {isPreview ? <p className="text-sm text-gray-600 line-clamp-3">{item.content}</p> : <textarea value={item.content} onChange={e => { const ni = [...block.data.items]; ni[idx].content = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="w-full text-sm border rounded p-1 h-20" />}
+             <div className="flex-1">
+               {isPreview ? (
+                  item.link ? (
+                    <a href={item.link} target="_blank" rel="noopener noreferrer" className="block font-bold text-lg mb-2 text-gray-800 hover:text-primary leading-snug hover:underline decoration-primary decoration-2 underline-offset-2 transition-all cursor-pointer">
+                      {item.title}
+                      <Icons.ExternalLink className="inline ml-1 w-3 h-3 text-gray-400" />
+                    </a>
+                  ) : (
+                    <h3 className="font-bold text-lg mb-2 text-gray-800 leading-snug">{item.title}</h3>
+                  )
+               ) : (
+                 <div className="flex flex-col gap-2 mb-2">
+                   <textarea value={item.title} onChange={e => { const ni = [...block.data.items]; ni[idx].title = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="w-full font-bold text-lg border-b" rows={2} placeholder="Tajuk Berita" />
+                   <input value={item.link || ''} onChange={e => { const ni = [...block.data.items]; ni[idx].link = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="text-xs border rounded p-1 w-full bg-gray-50 text-gray-600" placeholder="URL Pautan (Optional)" />
+                 </div>
+               )}
+               
+               {isPreview ? <p className="text-sm text-gray-600 line-clamp-3">{item.content}</p> : <textarea value={item.content} onChange={e => { const ni = [...block.data.items]; ni[idx].content = e.target.value; onUpdate(block.id, {...block.data, items: ni}) }} className="w-full text-sm border rounded p-1 h-20" placeholder="Ringkasan berita..." />}
+             </div>
              
              {!isPreview && <button onClick={() => { const ni = block.data.items.filter((_, i) => i !== idx); onUpdate(block.id, {...block.data, items: ni}) }} className="absolute top-2 right-2 text-red-300 hover:text-red-500"><Icons.Trash2 size={16} /></button>}
           </div>
         ))}
         {!isPreview && (
-          <button onClick={() => onUpdate(block.id, {...block.data, items: [...block.data.items, { id: uuidv4(), title: 'Berita Baru', date: new Date().toISOString().split('T')[0], tag: 'HEM', content: 'Kandungan berita...' }]})} className="flex items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-8 text-gray-400 hover:bg-gray-50 hover:text-primary transition-all">
+          <button onClick={() => onUpdate(block.id, {...block.data, items: [...block.data.items, { id: uuidv4(), title: 'Berita Baru', date: new Date().toISOString().split('T')[0], tag: 'HAL EHWAL MURID', content: 'Kandungan berita...', link: '' }]})} className="flex items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-8 text-gray-400 hover:bg-gray-50 hover:text-primary transition-all min-h-[250px]">
             <Icons.Plus size={32} />
           </button>
         )}

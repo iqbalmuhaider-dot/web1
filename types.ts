@@ -175,6 +175,7 @@ export interface SpeechBlock extends BaseBlock {
     authorName: string;
     authorRole: string;
     fontSize?: 'sm' | 'md' | 'lg' | 'xl';
+    alignment?: 'left' | 'center' | 'justify';
   };
 }
 
@@ -297,8 +298,9 @@ export interface NewsItem {
   id: string;
   title: string;
   date: string;
-  tag: 'KUR' | 'HEM' | 'KOK' | 'PENT';
+  tag: 'PENTADBIRAN' | 'KURIKULUM' | 'HAL EHWAL MURID' | 'KOKURIKULUM' | 'PPKI' | 'KELAB KEBAJIKAN GURU DAN STAF';
   content: string;
+  link?: string;
 }
 
 export interface NewsBlock extends BaseBlock {
