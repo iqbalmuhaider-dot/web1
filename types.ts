@@ -14,6 +14,7 @@ export interface HeroBlock extends BaseBlock {
     buttonText: string;
     buttonLink?: string;
     fontSize?: 'sm' | 'md' | 'lg' | 'xl';
+    overlayOpacity?: number;
   };
 }
 

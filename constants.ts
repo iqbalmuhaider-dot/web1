@@ -24,7 +24,8 @@ export const INITIAL_DATA: WebsiteData = {
             subtitle: "PENDIDIKAN BERKUALITI INSAN TERDIDIK NEGARA SEJAHTERA",
             bgImage: "https://images.unsplash.com/photo-1577896334698-70c858c14172?q=80&w=2071&auto=format&fit=crop",
             buttonText: "Hubungi Kami",
-            fontSize: 'md'
+            fontSize: 'md',
+            overlayOpacity: 0.8
           }
         },
         {
@@ -127,7 +128,7 @@ export const INITIAL_DATA: WebsiteData = {
             email: "mba0001@moe.edu.my",
             phone: "+606-3841234",
             address: "SK Masjid Tanah (Integrasi), 78300 Masjid Tanah, Melaka.",
-            mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3986.3664723469145!2d102.1091233147551!3d2.383569998262791!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d1e56b9710cf4b%3A0x66b6b12b7d6309d2!2sSK%20Masjid%20Tanah!5e0!3m2!1sen!2smy!4v1647831234567"
+            mapUrl: '<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3986.3664723469145!2d102.1091233147551!3d2.383569998262791!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d1e56b9710cf4b%3A0x66b6b12b7d6309d2!2sSK%20Masjid%20Tanah!5e0!3m2!1sen!2smy!4v1647831234567" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>'
           }
         },
         {

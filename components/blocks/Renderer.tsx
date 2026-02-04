@@ -64,10 +64,25 @@ export const HeroRenderer: React.FC<{ block: HeroBlock } & RendererProps> = ({ b
         className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
         style={{ backgroundImage: `url(${block.data.bgImage})` }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/90 via-primary/70 to-primary/90" />
+      <div 
+        className="absolute inset-0 bg-primary transition-opacity duration-300" 
+        style={{ opacity: block.data.overlayOpacity ?? 0.8 }} 
+      />
       
       {!isPreview && (
         <div className="absolute top-4 right-4 z-30 flex flex-col gap-2 items-end">
+           <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-100 flex items-center gap-2">
+              <span className="text-[10px] font-bold text-gray-500 uppercase">Overlay</span>
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.1" 
+                value={block.data.overlayOpacity ?? 0.8} 
+                onChange={(e) => onUpdate(block.id, { ...block.data, overlayOpacity: parseFloat(e.target.value) })}
+                className="w-20"
+              />
+           </div>
            <FontSizeControl value={block.data.fontSize} onChange={(v) => onUpdate(block.id, { ...block.data, fontSize: v })} />
            <ImageControl label="URL Gambar Latar" url={block.data.bgImage} onChange={(val) => onUpdate(block.id, { ...block.data, bgImage: val })} />
         </div>
@@ -340,7 +355,7 @@ export const GalleryRenderer: React.FC<{ block: GalleryBlock } & RendererProps> 
       <div className="text-center mb-8">
         {isPreview ? <h2 className="text-3xl font-bold">{block.data.title}</h2> : <input value={block.data.title} onChange={e => onUpdate(block.id, {...block.data, title: e.target.value})} className="text-center font-bold text-3xl border-b border-dashed w-full outline-none" placeholder="Tajuk Galeri" />}
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(150px,1fr))] md:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
         {block.data.images.map((img, idx) => (
           <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden shadow-md">
             <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
@@ -366,8 +381,10 @@ export const GalleryRenderer: React.FC<{ block: GalleryBlock } & RendererProps> 
 export const ContactRenderer: React.FC<{ block: ContactBlock } & RendererProps> = ({ block, isPreview, onUpdate }) => {
   const getMapSrc = (input: string) => {
     if (!input) return '';
+    // Extract src from iframe tag
     const srcMatch = input.match(/src="([^"]+)"/);
     if (srcMatch && srcMatch[1]) return srcMatch[1];
+    // Allow raw URLs (assuming they are embeddable)
     if (input.trim().startsWith('http')) return input;
     return '';
   };
@@ -490,7 +507,7 @@ export const ImageRenderer: React.FC<{ block: ImageBlock } & RendererProps> = ({
   
   return (
     <div className="py-12 px-4 flex flex-col items-center">
-      <div className={`${widthClass} w-full overflow-hidden rounded-2xl shadow-xl relative group`}>
+      <div className={`w-full ${widthClass} overflow-hidden rounded-2xl shadow-xl relative group`}>
         <img src={block.data.url} alt={block.data.caption} className={`w-full h-auto object-cover ${animClass}`} />
         {(block.data.caption || !isPreview) && (
           <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-6 pt-12 text-white">
